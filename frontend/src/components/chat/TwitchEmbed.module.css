@@ -27,9 +27,12 @@
   overflow: hidden;
 }
 
-.embedWrapper iframe {
+.embedWrapper iframe,
+.embedWrapper > div,
+.embedWrapper > div > iframe {
   width: 100% !important;
   height: 600px !important;
+  min-height: 600px !important;
   border: none;
   border-radius: 0 0 8px 8px;
 }
