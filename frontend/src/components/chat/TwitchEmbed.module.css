@@ -1,0 +1,56 @@
+.twitchEmbedContainer {
+  margin-bottom: 20px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.title {
+  color: #9146ff;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  padding: 15px 20px;
+  background: #18181b;
+  border-bottom: 1px solid #333;
+}
+
+.embedWrapper {
+  position: relative;
+  width: 100%;
+  padding: 0;
+}
+
+.embedWrapper iframe {
+  width: 100%;
+  border: none;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .twitchEmbedContainer {
+    margin-bottom: 15px;
+  }
+  
+  .title {
+    font-size: 18px;
+    padding: 12px 15px;
+  }
+  
+  .embedWrapper {
+    height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .embedWrapper {
+    height: 200px;
+  }
+  
+  .title {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+}
