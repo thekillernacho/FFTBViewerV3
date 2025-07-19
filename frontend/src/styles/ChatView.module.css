@@ -12,6 +12,7 @@
     display: flex;
     flex-direction: column;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 1rem;
 }
 
 .chatHeader {
@@ -38,9 +39,11 @@
     border-radius: 8px;
     padding: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    height: 500px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 10;
 }
 
 .messagesList {
