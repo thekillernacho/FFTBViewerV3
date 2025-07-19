@@ -11,7 +11,7 @@ interface TwitchEmbedProps {
 export const TwitchEmbed: React.FC<TwitchEmbedProps> = ({ 
   channel = 'fftbattleground',
   width = '100%',
-  height = '450px'
+  height = '600px'
 }) => {
   return (
     <div className={styles.twitchEmbedContainer}>

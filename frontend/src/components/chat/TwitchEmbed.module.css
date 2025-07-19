@@ -22,7 +22,8 @@
   position: relative;
   width: 100%;
   padding: 0;
-  max-height: 480px;
+  height: 600px;
+  min-height: 400px;
   overflow: hidden;
 }
 
@@ -44,13 +45,15 @@
   }
   
   .embedWrapper {
-    height: 250px;
+    height: 400px;
+    min-height: 300px;
   }
 }
 
 @media (max-width: 480px) {
   .embedWrapper {
-    height: 200px;
+    height: 300px;
+    min-height: 250px;
   }
   
   .title {
