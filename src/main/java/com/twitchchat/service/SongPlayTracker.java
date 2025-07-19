@@ -9,6 +9,7 @@ import com.twitchchat.repository.TrackPlayRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,9 @@ public class SongPlayTracker {
     
     @Autowired
     private TrackPlayProperties trackPlayProperties;
+    
+    @Value("${track.play.deduplication.seconds:10}")
+    private int deduplicationSeconds;
     
     /**
      * Asynchronously track a song play and update its occurrence count
@@ -63,7 +67,7 @@ public class SongPlayTracker {
     }
     
     /**
-     * Track a song play and update its occurrence count
+     * Track a song play and update its occurrence count with deduplication
      * @param songTitle The title of the song that was played
      * @return true if the song was found and updated, false otherwise
      */
@@ -72,6 +76,15 @@ public class SongPlayTracker {
         
         if (songOpt.isPresent()) {
             Song song = songOpt.get();
+            
+            // Check for duplicate plays within the deduplication window (song duration or 10 seconds minimum)
+            int deduplicationWindow = calculateDeduplicationWindow(song);
+            LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(deduplicationWindow);
+            if (trackPlayRepository.existsBySongAndPlayedAtAfter(song, cutoffTime)) {
+                logger.debug("Duplicate track play detected for '{}' within {} seconds (song duration: {}), skipping", 
+                           songTitle, deduplicationWindow, song.getDuration());
+                return false;
+            }
             
             // Update song occurrence count and timestamp only if enabled
             if (trackPlayProperties.isUpdateOccurrences()) {
@@ -96,6 +109,64 @@ public class SongPlayTracker {
             logger.warn("Song '{}' not found in database, cannot track play", songTitle);
             return false;
         }
+    }
+    
+    /**
+     * Check if a song can be tracked (not a duplicate within the deduplication window)
+     * Uses the song's duration as the deduplication window, with a 10-second minimum
+     * @param songTitle The title of the song to check
+     * @return true if the song can be tracked, false if it's a duplicate
+     */
+    public boolean canTrackSong(String songTitle) {
+        Optional<Song> songOpt = songRepository.findByTitle(songTitle);
+        
+        if (songOpt.isPresent()) {
+            Song song = songOpt.get();
+            int deduplicationWindow = calculateDeduplicationWindow(song);
+            LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(deduplicationWindow);
+            return !trackPlayRepository.existsBySongAndPlayedAtAfter(song, cutoffTime);
+        }
+        
+        return false; // Song not found
+    }
+    
+    /**
+     * Get the deduplication window in seconds
+     * @return The deduplication window duration
+     */
+    public int getDeduplicationSeconds() {
+        return deduplicationSeconds;
+    }
+    
+    /**
+     * Calculate the deduplication window for a song based on its duration
+     * @param song The song to calculate the window for
+     * @return The deduplication window in seconds (minimum 10 seconds)
+     */
+    private int calculateDeduplicationWindow(Song song) {
+        try {
+            String duration = song.getDuration();
+            if (duration == null || duration.trim().isEmpty()) {
+                return Math.max(deduplicationSeconds, 10); // Default to config or 10 seconds minimum
+            }
+            
+            // Parse duration format "M:SS" or "MM:SS"
+            String[] parts = duration.split(":");
+            if (parts.length == 2) {
+                int minutes = Integer.parseInt(parts[0]);
+                int seconds = Integer.parseInt(parts[1]);
+                int totalSeconds = minutes * 60 + seconds;
+                
+                // Use song duration but enforce 10-second minimum
+                return Math.max(totalSeconds, 10);
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to parse song duration '{}' for song '{}', using default deduplication window", 
+                       song.getDuration(), song.getTitle());
+        }
+        
+        // Fallback to configured value or 10 seconds minimum
+        return Math.max(deduplicationSeconds, 10);
     }
     
     /**

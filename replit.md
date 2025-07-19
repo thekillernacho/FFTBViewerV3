@@ -53,6 +53,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 19, 2025 - Track Play Deduplication System & Database Cleanup:**
+- **REMOVED 16 DUPLICATE TRACK PLAYS**: Successfully cleaned up overlapping track plays that occurred within song duration windows
+- **IMPLEMENTED DURATION-BASED DEDUPLICATION**: System now uses each song's actual duration as the deduplication window (e.g., 3:00 song = 180-second window)
+- **10-SECOND MINIMUM PROTECTION**: Short songs (under 10 seconds) use 10-second minimum deduplication window for adequate protection
+- **ENHANCED TRACKPLAYREPOSITORY**: Added `existsBySongAndPlayedAtAfter()` method for efficient duplicate detection queries
+- **UPDATED SONGPLAYTRACKER SERVICE**: Integrated smart deduplication check with duration parsing before recording any track play
+- **COMPREHENSIVE UNIT TESTS**: Created 22 test cases covering duration parsing, minimum windows, invalid durations, and edge cases
+- **H2 DATABASE INTEGRATION TESTS**: Set up in-memory H2 database for repository testing with proper JPA configuration
+- **INTELLIGENT DURATION PARSING**: Added robust parsing of MM:SS format with fallback to 10-second default for invalid formats
+- **OPTIMIZED DATABASE PERFORMANCE**: Prevented technical duplicates while allowing legitimate replays after song completion
+
 **July 19, 2025 - Production Deployment Configuration & Track Play Updates:**
 - **PRODUCTION MODE DEPLOYMENT**: Updated run-replit-auto.sh to use production profile by default for deployment
 - **TRACK PLAY UPDATES ENABLED**: Production mode now properly records song plays to database with all tracking features active
