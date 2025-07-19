@@ -4,8 +4,6 @@
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #333;
-  position: relative;
-  z-index: 1;
 }
 
 .title {
@@ -19,7 +17,6 @@
 }
 
 .embedWrapper {
-  position: relative;
   width: 100%;
   padding: 0;
   height: 600px;
