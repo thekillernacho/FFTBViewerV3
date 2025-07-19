@@ -19,8 +19,8 @@ export const TwitchEmbed: React.FC<TwitchEmbedProps> = ({
       <div className={styles.embedWrapper}>
         <TwitchEmbedVideo
           channel={channel}
-          width={width}
-          height={height}
+          width="100%"
+          height="600"
           layout="video"
           theme="dark"
           autoplay={false}
