@@ -6,7 +6,7 @@ module.exports = {
   entry: './frontend/src/index.tsx',
   output: {
     path: path.resolve(__dirname, 'src/main/resources/static/dist'),
-    filename: 'bundle.js',
+    filename: 'bundle.[contenthash].js',
     publicPath: '/dist/',
     clean: true,
   },
@@ -54,7 +54,7 @@ module.exports = {
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename: 'styles.css',
+      filename: 'styles.[contenthash].css',
     }),
     new HtmlWebpackPlugin({
       template: './frontend/public/index.html',
