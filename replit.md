@@ -53,6 +53,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 20, 2025 - Duplicate Track Play Cleanup System Implementation:**
+- **IMPLEMENTED COMPREHENSIVE DUPLICATE CLEANUP**: Created complete duplicate track play detection and removal system
+- **ENHANCED TRACKPLAYREPOSITORY**: Added `findAllPotentialDuplicateTrackPlays()` method for efficient duplicate detection
+- **CREATED DUPLICATECLEANUPCONTROLLER**: New REST API endpoints for manual duplicate cleanup and status checking
+- **DURATION-BASED DUPLICATE DETECTION**: System uses each song's actual duration as deduplication window with 10-second minimum
+- **SERVICE LAYER LOGIC**: Moved complex duplicate detection logic to PlaylistSyncService for better architecture
+- **BATCH PROCESSING**: Efficient batch deletion prevents database performance issues during cleanup operations
+- **SIMPLIFIED SQL QUERIES**: Fixed Hibernate compatibility issues with simplified, portable database queries
+- **TRANSACTIONAL OPERATIONS**: Added @Transactional support for reliable database operations during cleanup
+- **COMPREHENSIVE ERROR HANDLING**: Added proper exception handling and logging throughout cleanup process
+
 **July 20, 2025 - ConnectionStatus Component Refactoring:**
 - **EXTRACTED CONNECTIONSTATUS COMPONENT**: Created dedicated ConnectionStatus.tsx component for better code organization
 - **IMPROVED COMPONENT SEPARATION**: Moved connection status logic out of ChatDisplay into focused, reusable component

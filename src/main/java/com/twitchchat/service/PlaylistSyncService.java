@@ -1,7 +1,9 @@
 package com.twitchchat.service;
 
 import com.twitchchat.model.Song;
+import com.twitchchat.model.TrackPlay;
 import com.twitchchat.repository.SongRepository;
+import com.twitchchat.repository.TrackPlayRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +45,9 @@ public class PlaylistSyncService {
 
     @Autowired
     private SongRepository songRepository;
+    
+    @Autowired
+    private TrackPlayRepository trackPlayRepository;
 
     /**
      * Initial sync when application starts (async to avoid blocking startup)
@@ -198,6 +203,9 @@ public class PlaylistSyncService {
             } else {
                 logger.info("No new songs to add, database is up to date");
             }
+
+            // Clean up duplicate track plays
+            cleanupDuplicateTrackPlays();
 
             long totalSongs = songRepository.countAllSongs();
             logger.info("Playlist sync completed. Total songs in database: {}", totalSongs);
@@ -450,5 +458,145 @@ public class PlaylistSyncService {
     public void forceSyncPlaylist() {
         logger.info("Manual playlist sync triggered");
         syncPlaylist();
+    }
+    
+    /**
+     * Clean up duplicate track plays within each song's duration window
+     * Keeps only the oldest play within each duplicate group
+     */
+    @Transactional
+    public void cleanupDuplicateTrackPlays() {
+        try {
+            logger.info("Starting duplicate track play cleanup...");
+            
+            // Find all track plays for songs with multiple plays
+            List<TrackPlay> potentialDuplicates = trackPlayRepository.findAllPotentialDuplicateTrackPlays();
+            
+            if (potentialDuplicates.isEmpty()) {
+                logger.info("No songs with multiple track plays found");
+                return;
+            }
+            
+            logger.info("Analyzing {} track plays for duplicates within duration windows", potentialDuplicates.size());
+            
+            // Group track plays by song
+            Map<Long, List<TrackPlay>> trackPlaysBySong = new HashMap<>();
+            for (TrackPlay trackPlay : potentialDuplicates) {
+                Long songId = trackPlay.getSong().getId();
+                trackPlaysBySong.computeIfAbsent(songId, k -> new ArrayList<>()).add(trackPlay);
+            }
+            
+            List<Long> duplicateIds = new ArrayList<>();
+            Map<String, Integer> songDuplicateCounts = new HashMap<>();
+            
+            // Process each song's track plays
+            for (Map.Entry<Long, List<TrackPlay>> entry : trackPlaysBySong.entrySet()) {
+                List<TrackPlay> songTrackPlays = entry.getValue();
+                if (songTrackPlays.size() < 2) continue;
+                
+                // Sort by played time (oldest first)
+                songTrackPlays.sort((tp1, tp2) -> tp1.getPlayedAt().compareTo(tp2.getPlayedAt()));
+                
+                Song song = songTrackPlays.get(0).getSong();
+                long durationSeconds = parseDurationToSeconds(song.getDuration());
+                
+                // Find duplicates within duration window
+                List<TrackPlay> duplicatesForSong = findDuplicatesWithinWindow(songTrackPlays, durationSeconds);
+                
+                if (!duplicatesForSong.isEmpty()) {
+                    for (TrackPlay duplicate : duplicatesForSong) {
+                        duplicateIds.add(duplicate.getId());
+                    }
+                    songDuplicateCounts.put(song.getTitle(), duplicatesForSong.size());
+                    logger.info("Song '{}' ({} seconds) has {} duplicate track plays to remove", 
+                              song.getTitle(), durationSeconds, duplicatesForSong.size());
+                }
+            }
+            
+            if (duplicateIds.isEmpty()) {
+                logger.info("No duplicate track plays found within duration windows");
+                return;
+            }
+            
+            logger.info("Found {} duplicate track plays to remove across {} songs", 
+                      duplicateIds.size(), songDuplicateCounts.size());
+            
+            // Process deletions in batches
+            int batchSize = 100;
+            int totalDeleted = 0;
+            
+            for (int i = 0; i < duplicateIds.size(); i += batchSize) {
+                int endIndex = Math.min(i + batchSize, duplicateIds.size());
+                List<Long> batch = duplicateIds.subList(i, endIndex);
+                
+                try {
+                    int deletedCount = trackPlayRepository.deleteByIdIn(batch);
+                    totalDeleted += deletedCount;
+                    logger.info("Deleted batch of {} duplicate track plays (Total: {}/{})", 
+                              deletedCount, totalDeleted, duplicateIds.size());
+                } catch (Exception e) {
+                    logger.error("Error deleting batch of duplicate track plays", e);
+                }
+            }
+            
+            logger.info("Duplicate track play cleanup completed. Removed {} duplicate plays across {} songs", 
+                      totalDeleted, songDuplicateCounts.size());
+                      
+        } catch (Exception e) {
+            logger.error("Error during duplicate track play cleanup", e);
+        }
+    }
+    
+    /**
+     * Find duplicates within a list of track plays for a single song
+     * Keeps only the oldest play within each duration window
+     */
+    private List<TrackPlay> findDuplicatesWithinWindow(List<TrackPlay> trackPlays, long durationSeconds) {
+        List<TrackPlay> duplicates = new ArrayList<>();
+        
+        for (int i = 0; i < trackPlays.size(); i++) {
+            TrackPlay current = trackPlays.get(i);
+            boolean isDuplicate = false;
+            
+            // Check if this play is within the duration window of any earlier play
+            for (int j = 0; j < i; j++) {
+                TrackPlay earlier = trackPlays.get(j);
+                long timeDifference = Math.abs(java.time.Duration.between(earlier.getPlayedAt(), current.getPlayedAt()).getSeconds());
+                
+                if (timeDifference <= durationSeconds) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            
+            if (isDuplicate) {
+                duplicates.add(current);
+            }
+        }
+        
+        return duplicates;
+    }
+    
+    /**
+     * Parse duration string (MM:SS) to seconds for deduplication logic
+     */
+    private long parseDurationToSeconds(String duration) {
+        if (duration == null || duration.trim().isEmpty() || duration.equals("0:00")) {
+            return 10; // Default 10-second window for songs without duration
+        }
+        
+        try {
+            String[] parts = duration.split(":");
+            if (parts.length == 2) {
+                int minutes = Integer.parseInt(parts[0]);
+                int seconds = Integer.parseInt(parts[1]);
+                long totalSeconds = (minutes * 60L) + seconds;
+                return Math.max(10, totalSeconds); // Minimum 10-second window
+            }
+        } catch (Exception e) {
+            logger.warn("Could not parse duration '{}', using 10-second default", duration);
+        }
+        
+        return 10; // Default fallback
     }
 }
