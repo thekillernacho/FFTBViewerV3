@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
+import ConnectionStatus from './ConnectionStatus';
 import { ChatMessage as ChatMessageType } from '../../types';
 const styles = require('../../styles/ChatView.module.css');
 
@@ -21,9 +22,7 @@ function ChatDisplay({ messages, connected }: ChatDisplayProps) {
     <div ref={messagesContainerRef} className={styles.messagesContainer}>
       <div className={styles.messagesList}>
         {messages.length === 0 ? (
-          <div className={styles.loading}>
-            {connected ? 'Waiting for messages...' : 'Connecting to chat...'}
-          </div>
+          <ConnectionStatus connected={connected} />
         ) : (
           messages.map((message, index) => (
             <ChatMessage key={index} message={message} />
