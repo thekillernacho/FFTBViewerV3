@@ -9,14 +9,16 @@ interface ChatDisplayProps {
 }
 
 function ChatDisplay({ messages, connected }: ChatDisplayProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   return (
-    <div className={styles.messagesContainer}>
+    <div ref={messagesContainerRef} className={styles.messagesContainer}>
       <div className={styles.messagesList}>
         {messages.length === 0 ? (
           <div className={styles.loading}>
@@ -27,7 +29,6 @@ function ChatDisplay({ messages, connected }: ChatDisplayProps) {
             <ChatMessage key={index} message={message} />
           ))
         )}
-        <div ref={messagesEndRef} />
       </div>
     </div>
   );
