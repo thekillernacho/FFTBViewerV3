@@ -194,7 +194,7 @@ public class ApiController {
     @PostMapping("/playlist/sync")
     public ResponseEntity<Map<String, String>> forceSync() {
         try {
-            playlistSyncService.forceSyncPlaylist();
+            playlistSyncService.apiSyncPlaylist();
             
             Map<String, String> response = new HashMap<>();
             response.put("status", "success");
