@@ -53,15 +53,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**July 21, 2025 - Last Played Sorting Fix & NULLS LAST Implementation - COMPLETED:**
+**July 21, 2025 - Last Played Sorting Fix & Track Play PostgreSQL Syntax Fix - COMPLETED:**
 - **RESOLVED POSTGRESQL SYNTAX ERROR**: Fixed "syntax error at or near 'cross'" by converting from JPQL to native PostgreSQL queries
+- **FIXED TRACK PLAY POSTGRESQL SYNTAX**: Fixed `TIMESTAMPDIFF` MySQL syntax to PostgreSQL's `EXTRACT(EPOCH FROM (timestamp1 - timestamp2))` syntax
 - **IMPLEMENTED NULLS LAST SORTING**: Added native SQL queries with `NULLS LAST` clause for proper "Last Played" column sorting behavior
 - **FIXED SERVICE LAYER BUG**: Corrected service to call `lastPlayedAt` repository methods instead of `updatedAt` methods
 - **ADDED MISSING REPOSITORY METHODS**: Created `findAllOrderByLastPlayedAtAsc()` and `findAllOrderByLastPlayedAtDesc()` with NULLS LAST
 - **CORRECT PAGINATION BEHAVIOR**: Songs without "Last Played" dates (31,810+ songs) now appear after all dated songs (5 songs with actual dates)
 - **DATABASE-LEVEL SORTING**: Ensures consistent sorting behavior across all pagination pages using PostgreSQL's native NULLS LAST
-- **VERIFIED WORKING**: User confirmed sorting now works correctly - songs with dates appear first, "Never" songs appear last regardless of sort direction
-- **PRODUCTION DEPLOYMENT**: All compilation errors resolved and sorting functionality deployed successfully
+- **TRACK PLAY RECORDING RESTORED**: Song tracking now works successfully - "Dragon's Lair - Animation" tracked with occurrence updates and TrackPlay recording
+- **VERIFIED WORKING**: User confirmed sorting works correctly and track play recording is functional again
+- **PRODUCTION DEPLOYMENT**: All PostgreSQL syntax errors resolved and full functionality deployed successfully
 
 **July 21, 2025 - Foreign Key Constraint Fix & Cascading Delete Implementation:**
 - **RESOLVED POSTGRESQL FOREIGN KEY CONSTRAINT VIOLATIONS**: Fixed critical issue preventing song deletions due to track_plays table references
