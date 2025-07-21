@@ -53,6 +53,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 21, 2025 - Last Played Sorting Fix & NULLS LAST Implementation:**
+- **RESOLVED POSTGRESQL SYNTAX ERROR**: Fixed "syntax error at or near 'cross'" by converting from JPQL to native PostgreSQL queries
+- **IMPLEMENTED NULLS LAST SORTING**: Added native SQL queries with `NULLS LAST` clause for proper "Last Played" column sorting behavior
+- **CORRECT PAGINATION BEHAVIOR**: Songs without "Last Played" dates (31,334 out of 32,815 songs = 95.5%) appear after all dated songs
+- **DATABASE-LEVEL SORTING**: Ensures consistent sorting behavior across all pagination pages using PostgreSQL's native NULLS LAST
+- **WORKING AS DESIGNED**: Null values start appearing on page 31+ since first 30 pages contain the 1,481 songs with actual dates
+- **USER EXPECTATION vs REALITY**: Users may expect to see some "Never" values immediately, but NULLS LAST correctly shows all dated songs first
+
 **July 21, 2025 - Foreign Key Constraint Fix & Cascading Delete Implementation:**
 - **RESOLVED POSTGRESQL FOREIGN KEY CONSTRAINT VIOLATIONS**: Fixed critical issue preventing song deletions due to track_plays table references
 - **IMPLEMENTED CASCADING DELETE LOGIC**: Added `deleteBySongTitleIn()` method to TrackPlayRepository for safe cleanup of related track plays
