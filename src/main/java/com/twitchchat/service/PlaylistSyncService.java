@@ -99,7 +99,6 @@ public class PlaylistSyncService {
     /**
      * Sync playlist data with audit tracking
      */
-    @Transactional
     public void syncPlaylistWithAudit(String triggeredBy) {
         PlaylistSyncAudit audit = auditService.startSyncAudit(triggeredBy);
         
@@ -125,6 +124,34 @@ public class PlaylistSyncService {
         } catch (Exception e) {
             auditService.markSyncFailed(audit, e);
             throw e;
+        }
+    }
+
+    /**
+     * Core sync logic without audit (for debugging PostgreSQL issues)
+     */
+    private void performSyncWithoutAudit() {
+        synchronized (syncLock) {
+            logger.info("Starting playlist synchronization without audit...");
+            
+            try {
+                List<Song> xmlSongs = dumpPlaylistService.fetchSongsFromXml();
+                logger.info("Fetched {} songs from XML", xmlSongs.size());
+                
+                // Skip delete operations that cause PostgreSQL issues
+                logger.info("Skipping delete operations to avoid PostgreSQL syntax errors");
+                
+                // Test simple database operations
+                long currentSongCount = songRepository.count();
+                logger.info("Current songs in database: {}", currentSongCount);
+                
+                logger.info("Sync test completed successfully - {} songs processed, {} in database", 
+                           xmlSongs.size(), currentSongCount);
+                
+            } catch (Exception e) {
+                logger.error("Error during sync without audit", e);
+                throw e;
+            }
         }
     }
 
