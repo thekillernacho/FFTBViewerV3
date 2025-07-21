@@ -53,6 +53,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 21, 2025 - Foreign Key Constraint Fix & Cascading Delete Implementation:**
+- **RESOLVED POSTGRESQL FOREIGN KEY CONSTRAINT VIOLATIONS**: Fixed critical issue preventing song deletions due to track_plays table references
+- **IMPLEMENTED CASCADING DELETE LOGIC**: Added `deleteBySongTitleIn()` method to TrackPlayRepository for safe cleanup of related track plays
+- **ENHANCED PLAYLIST SYNC SERVICE**: Modified song deletion process to first remove track plays, then safely delete songs without constraint violations
+- **PROPER TRANSACTION HANDLING**: Ensured data integrity with transactional deletion operations that prevent orphaned references
+- **TESTED DATABASE CLEANUP**: Successfully demonstrated fix with test scenario showing clean deletion of songs with associated track plays
+- **PRODUCTION DEPLOYMENT READY**: All compilation errors resolved and foreign key constraint handling implemented for reliable song management
+
 **July 20, 2025 - Deployment Fix & Missing Repository Methods:**
 - **FIXED DEPLOYMENT COMPILATION ERRORS**: Added missing `findAllDuplicateTrackPlays()` and `findDuplicateTrackPlaysWithinDuration()` methods to TrackPlayRepository
 - **RESOLVED TEST COMPILATION FAILURES**: Fixed method signature mismatches between test files and repository interface

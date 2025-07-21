@@ -129,6 +129,12 @@ public class PlaylistSyncService {
                     int currentBatch = (i / batchSize) + 1;
                     
                     try {
+                        // First, delete related track plays to avoid foreign key constraint violations
+                        int deletedTrackPlays = trackPlayRepository.deleteBySongTitleIn(batch);
+                        logger.info("Removal batch {}/{}: Cleaned up {} track plays for songs to be deleted", 
+                                  currentBatch, totalBatches, deletedTrackPlays);
+                        
+                        // Now delete the songs
                         int deletedCount = songRepository.deleteByTitleIn(batch);
                         logger.info("Removal batch {}/{} completed: Deleted {} songs", 
                                   currentBatch, totalBatches, deletedCount);
