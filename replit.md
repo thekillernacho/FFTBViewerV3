@@ -53,6 +53,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 22, 2025 - Chat Parsing Enhancement: Bot Status Message Filtering - COMPLETED:**
+- **ENHANCED CHAT PARSING LOGIC**: Added intelligent filtering to distinguish between new track announcements and user-specific status responses
+- **IMPLEMENTED USER STATUS FILTERING**: Bot responses like "OtherBrand, the current track is: Song Title. It will play for another X seconds." are now ignored
+- **PRESERVED NEW TRACK DETECTION**: Messages like "The track is now: Song Title. It will play for X seconds." continue to be tracked as new song plays
+- **ADDED COMPREHENSIVE UNIT TESTS**: Created test cases covering user status patterns, new track announcements, and edge cases
+- **REGEX PATTERN MATCHING**: Uses precise regex patterns to identify user-specific responses vs. new track announcements
+- **PRODUCTION READY FILTERING**: Prevents false logging of current track status inquiries while maintaining accurate new track detection
+- **VERIFIED WORKING**: Live testing shows proper filtering - new tracks detected, user status responses ignored
+
 **July 22, 2025 - Keystore Viewer API Fix & Complete Redis Integration - COMPLETED:**
 - **FIXED KEYSTORE VIEWER API**: Resolved persistent 500 errors in keystore controller by creating simplified SpringBoot-compatible implementation
 - **ELIMINATED SPRING CONTEXT CONFLICTS**: Replaced direct RedisTemplate injection with CurrentTrackService dependency to bypass component scanning issues
