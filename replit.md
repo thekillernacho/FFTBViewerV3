@@ -53,6 +53,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 22, 2025 - Playlist Sync Delete Operations Fixed - COMPLETED:**
+- **FIXED DISABLED DELETE OPERATIONS**: Re-enabled song deletion in playlist sync that was temporarily disabled due to resolved PostgreSQL foreign key issues
+- **ROOT CAUSE IDENTIFIED**: "Battletoads - Turbo Tunnel Part 2" and similar obsolete entries survived syncs because delete operations were commented out
+- **RESTORED CASCADING DELETE LOGIC**: Updated deleteSongsAndTrackPlays() method to use existing deleteBySongTitleIn() and deleteByTitleIn() methods
+- **PROPER DELETE SEQUENCE**: First deletes associated track plays, then removes songs to avoid foreign key constraint violations
+- **CLEANUP OBSOLETE ENTRIES**: Manually removed "Battletoads - Turbo Tunnel Part 2" (ID 155757) which no longer exists in XML source
+- **SYNC INTEGRITY RESTORED**: Playlist sync now properly adds, updates, AND removes songs to keep database synchronized with XML source
+- **COMPREHENSIVE LOGGING**: Added detailed logging for delete operations including counts of deleted track plays and songs
+- **PRODUCTION SYNC READY**: Delete operations will now work correctly in scheduled production sync jobs
+
 **July 22, 2025 - Replit Database Integration for Current Track Persistence - COMPLETED:**
 - **IMPLEMENTED REPLIT DATABASE INTEGRATION**: Added ReplitDatabaseService for persistent current track storage using Replit's key-value store
 - **CREATED CURRENTTRACKSERVICE**: New service manages current track state with clean data architecture - stores only essentials, calculates dynamically

@@ -269,10 +269,16 @@ public class PlaylistSyncService {
         }
         
         try {
-            // TEMPORARILY SKIP: PostgreSQL syntax issues with delete operations
-            logger.warn("Skipping deletion of {} songs due to PostgreSQL syntax issues", songTitlesToDelete.size());
-            logger.warn("Songs that would be deleted: {}", songTitlesToDelete);
-            int songsDeleted = 0;
+            logger.info("Deleting {} songs and their associated track plays", songTitlesToDelete.size());
+            logger.info("Songs to delete: {}", songTitlesToDelete);
+            
+            // First delete associated track plays to avoid foreign key constraint violations
+            int trackPlaysDeleted = trackPlayRepository.deleteBySongTitleIn(songTitlesToDelete);
+            logger.info("Deleted {} associated track plays", trackPlaysDeleted);
+            
+            // Then delete the songs themselves
+            int songsDeleted = songRepository.deleteByTitleIn(songTitlesToDelete);
+            logger.info("Deleted {} songs from database", songsDeleted);
             
             return songsDeleted;
         } catch (Exception e) {
