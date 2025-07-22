@@ -61,12 +61,16 @@ public class ApiController {
         // Get the last sync completion time
         String lastSyncTime = playlistSyncAuditService.getLastSyncCompletionTime();
         
+        // Get the earliest track play date (when tracking started)
+        String trackingStartDate = songPlayTracker.getTrackingStartDate();
+        
         status.put("totalSongs", totalSongs);
         status.put("isAvailable", isAvailable);
         status.put("status", isAvailable ? "ready" : "syncing");
         status.put("totalPlays", totalPlays);
         status.put("playedSongs", playedSongs);
         status.put("lastSyncTime", lastSyncTime);
+        status.put("trackingStartDate", trackingStartDate);
         
         return ResponseEntity.ok(status);
     }

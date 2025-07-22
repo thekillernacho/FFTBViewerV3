@@ -184,8 +184,20 @@ public class SongPlayTracker {
      * @return The count of played songs
      */
     public long getPlayedSongsCount() {
-        return songRepository.findAll().stream()
-            .filter(song -> song.getOccurrence() > 0)
-            .count();
+        return trackPlayRepository.countDistinctSongs();
+    }
+    
+    /**
+     * Get the date when tracking started (earliest track play)
+     * @return The tracking start date as a formatted string, or null if no plays recorded
+     */
+    public String getTrackingStartDate() {
+        try {
+            LocalDateTime earliestDate = trackPlayRepository.findEarliestTrackPlayDate();
+            return earliestDate != null ? earliestDate.toString() : null;
+        } catch (Exception e) {
+            logger.error("Error retrieving tracking start date: {}", e.getMessage());
+            return null;
+        }
     }
 }

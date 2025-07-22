@@ -17,6 +17,8 @@ const PlaylistView: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('updatedAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [latestSongTime, setLatestSongTime] = useState<string | null>(null);
+  const [totalPlays, setTotalPlays] = useState<number>(0);
+  const [trackingStartDate, setTrackingStartDate] = useState<string | null>(null);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
 
   // Debounce search term
@@ -46,6 +48,8 @@ const PlaylistView: React.FC = () => {
         
         setPlaylistData(data);
         setLatestSongTime(statusResponse.lastSyncTime);
+        setTotalPlays(statusResponse.totalPlays || 0);
+        setTrackingStartDate(statusResponse.trackingStartDate);
       } catch (err) {
         console.error('Error loading playlist data:', err);
         setError('Failed to load playlist data. Please try again.');
@@ -123,6 +127,8 @@ const PlaylistView: React.FC = () => {
             totalSongs={playlistData.totalSongs || 0}
             showingSongs={playlistData.songs?.length || 0}
             latestSongTime={latestSongTime}
+            totalPlays={totalPlays}
+            trackingStartDate={trackingStartDate}
           />
         )}
         
