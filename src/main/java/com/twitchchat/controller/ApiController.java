@@ -249,28 +249,5 @@ public class ApiController {
         return ResponseEntity.ok(mostPlayed);
     }
     
-    /**
-     * Get the current playing track information
-     */
-    @GetMapping("/current-track")
-    public ResponseEntity<Map<String, Object>> getCurrentTrack() {
-        return currentTrackService.getCurrentTrack()
-            .map(track -> {
-                Map<String, Object> response = new HashMap<>();
-                response.put("songTitle", track.getSongTitle());
-                response.put("duration", track.getDuration());
-                response.put("username", track.getUsername());
-                response.put("startTime", track.getStartTime());
-                response.put("elapsedSeconds", track.getElapsedSeconds());
-                response.put("remainingSeconds", track.getRemainingSeconds());
-                response.put("hasTrack", true);
-                return ResponseEntity.ok(response);
-            })
-            .orElseGet(() -> {
-                Map<String, Object> response = new HashMap<>();
-                response.put("hasTrack", false);
-                response.put("message", "No track currently playing");
-                return ResponseEntity.ok(response);
-            });
-    }
+
 }
