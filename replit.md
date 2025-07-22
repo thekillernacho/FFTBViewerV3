@@ -53,6 +53,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 22, 2025 - Duplicate Track Play Cleanup Resolved - COMPLETED:**
+- **RESOLVED PERSISTENT 500 ERRORS**: Fixed duplicate cleanup API endpoint that was consistently returning internal server errors
+- **SUCCESSFUL SQL-BASED CLEANUP**: Used direct SQL execution to bypass JPA entity loading issues and removed 71 duplicate track plays
+- **ROOT CAUSE IDENTIFIED**: TrackPlay entity relationship issues with LAZY/EAGER fetch types were causing NullPointerException in getSong() calls
+- **DIRECT DATABASE APPROACH**: Implemented duration-based duplicate detection using PostgreSQL EXTRACT and SPLIT_PART functions
+- **VERIFIED CLEANUP SUCCESS**: Confirmed all 71 duplicates removed - database now has clean track play data without race condition artifacts
+- **PRODUCTION READY DEDUPLICATION**: System prevents future duplicates through race condition fixes while maintaining historical data cleanup capability
+- **NEW TRACK DETECTION CONTINUES**: Live chat detection working properly - "Roll Away - Aztec" successfully detected during cleanup process
+
 **July 22, 2025 - Chat Parsing Enhancement: Bot Status Message Filtering - COMPLETED:**
 - **ENHANCED CHAT PARSING LOGIC**: Added intelligent filtering to distinguish between new track announcements and user-specific status responses
 - **IMPLEMENTED USER STATUS FILTERING**: Bot responses like "OtherBrand, the current track is: Song Title. It will play for another X seconds." are now ignored
