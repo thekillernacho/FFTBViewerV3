@@ -21,7 +21,8 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
       try {
         const trackData = await CurrentTrackService.getCurrentTrack();
         
-        if (trackData.hasTrack && trackData.songTitle) {
+        if (trackData.songTitle) {
+          // Show track information whether it's currently playing or finished
           const trackEvent: TrackEvent = {
             songTitle: trackData.songTitle,
             duration: trackData.duration || 0,
@@ -30,9 +31,10 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
           };
           
           setCurrentTrack(trackEvent);
-          setTimeRemaining(trackData.remainingSeconds || null);
+          // Only show remaining time if track is actively playing
+          setTimeRemaining(trackData.hasTrack ? (trackData.remainingSeconds || null) : null);
         } else {
-          // No current track or track finished
+          // No track data available
           setCurrentTrack(null);
           setTimeRemaining(null);
         }
