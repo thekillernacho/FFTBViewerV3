@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["redis"]
 
 [workflows]
-runButton = "Project"
+runButton = "Working Server"
 
 [[workflows.workflow]]
 name = "Project"
