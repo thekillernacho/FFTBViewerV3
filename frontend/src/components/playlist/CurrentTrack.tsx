@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { webSocketService, TrackEvent } from '../../services/WebSocketService';
+import { CurrentTrackService, CurrentTrackResponse } from '../../services/CurrentTrackService';
 
 const styles = require('../../styles/PlaylistView.module.css');
 
@@ -11,16 +12,46 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
   const [currentTrack, setCurrentTrack] = useState<TrackEvent | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Load current track from API on component mount
+  useEffect(() => {
+    const loadCurrentTrack = async () => {
+      setLoading(true);
+      try {
+        const trackData = await CurrentTrackService.getCurrentTrack();
+        
+        if (trackData.hasTrack && trackData.songTitle) {
+          const trackEvent: TrackEvent = {
+            songTitle: trackData.songTitle,
+            duration: trackData.duration || 0,
+            username: trackData.username || '',
+            time: trackData.startTime || new Date().toISOString()
+          };
+          
+          setCurrentTrack(trackEvent);
+          setTimeRemaining(trackData.remainingSeconds || null);
+        }
+      } catch (error) {
+        console.error('Failed to load current track:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadCurrentTrack();
+  }, []);
 
   useEffect(() => {
-    // Subscribe to track events
+    // Subscribe to real-time track events via WebSocket
     const unsubscribe = webSocketService.subscribeToTracks((trackEvent: TrackEvent) => {
-      console.log('Received track event:', trackEvent);
+      console.log('Received track event via WebSocket:', trackEvent);
       setCurrentTrack(trackEvent);
       setTimeRemaining(trackEvent.duration);
+      setLoading(false);
     });
 
-    // Monitor connection status
+    // Monitor WebSocket connection status
     const checkConnection = () => {
       setConnectionStatus(webSocketService.isConnected() ? 'connected' : 'disconnected');
     };
@@ -58,7 +89,18 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
     return ((total - current) / total) * 100;
   };
 
-  if (connectionStatus === 'disconnected') {
+  if (loading) {
+    return (
+      <div className={`current-track-container ${className || ''}`}>
+        <div className="current-track-waiting">
+          <span className="status-indicator connecting">●</span>
+          <span>Loading current track...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (connectionStatus === 'disconnected' && !currentTrack) {
     return (
       <div className={`current-track-container ${className || ''}`}>
         <div className="current-track-error">

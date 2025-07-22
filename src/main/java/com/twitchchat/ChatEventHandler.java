@@ -6,6 +6,7 @@ import com.twitchchat.event.detector.TrackPlayDetector;
 import com.twitchchat.model.ChatMessage;
 
 import com.twitchchat.service.SongPlayTracker;
+import com.twitchchat.service.CurrentTrackService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class ChatEventHandler {
     
     @Autowired
     private TrackPlayDetector trackPlayDetector;
+    
+    @Autowired
+    private CurrentTrackService currentTrackService;
 
     /**
      * Handle incoming chat messages
@@ -49,6 +53,9 @@ public class ChatEventHandler {
             TrackPlayEvent trackPlayEvent = trackPlayDetector.detect(chatMessage);
             if (trackPlayEvent != null) {
                 logger.info("Track play event detected: {}", trackPlayEvent);
+                
+                // Update current track cache
+                currentTrackService.updateCurrentTrack(trackPlayEvent);
                 
                 // Broadcast track event via WebSocket to all subscribers
                 messagingTemplate.convertAndSend("/topic/tracks", trackPlayEvent);

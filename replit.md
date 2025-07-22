@@ -53,6 +53,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 22, 2025 - Current Track Display & WebSocket Caching System - COMPLETED:**
+- **IMPLEMENTED CURRENT TRACK DISPLAY**: Added real-time current track component above playlist showing song title, duration, and progress with attractive styling
+- **CREATED REUSABLE WEBSOCKETSERVICE**: Built frontend WebSocketService for WebSocket connections across multiple pages with proper subscription management
+- **ENHANCED BACKEND TRACK CACHING**: Created CurrentTrackService to cache current track state and timing information for immediate page loads
+- **ADDED API ENDPOINT /api/current-track**: Backend endpoint provides cached current track information for instant frontend loading without waiting for WebSocket
+- **DUAL-SOURCE FRONTEND STRATEGY**: Frontend uses both API calls (immediate data) and WebSocket (real-time updates) for optimal user experience
+- **SMART TIMING CALCULATIONS**: Backend tracks song start times and calculates elapsed/remaining seconds for accurate progress display
+- **PROGRESS BAR INTEGRATION**: Visual progress bar shows track completion status with real-time countdown functionality
+- **WEBSOCKET TOPIC SUBSCRIPTION**: Frontend subscribes to /topic/tracks for live track updates via STOMP WebSocket protocol
+- **LOADING STATE MANAGEMENT**: Proper loading states and error handling for both API calls and WebSocket connections
+- **CROSS-PAGE WEBSOCKET SUPPORT**: WebSocketService designed for reuse across chat and music pages with unified connection management
+
 **July 22, 2025 - Track Play Statistics & First/Last Pagination - COMPLETED:**
 - **IMPLEMENTED TRACK PLAY STATISTICS**: Added comprehensive track play statistics display to playlist page showing total plays and tracking start date
 - **ENHANCED API ENDPOINT**: Updated `/api/playlist/status` to include `totalPlays` and `trackingStartDate` fields for frontend consumption
