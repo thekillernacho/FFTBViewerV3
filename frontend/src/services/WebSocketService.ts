@@ -81,16 +81,31 @@ export class WebSocketService {
       return () => {};
     }
 
-    const subscription = this.client.subscribe('/topic/tracks', (message: IMessage) => {
-      try {
-        const trackEvent: TrackEvent = JSON.parse(message.body);
-        callback(trackEvent);
-      } catch (error) {
-        console.error('Error parsing track event:', error);
-      }
-    });
+    if (!this.connected) {
+      console.warn('WebSocket not connected yet, subscription may fail');
+    }
 
-    return () => subscription.unsubscribe();
+    try {
+      const subscription = this.client.subscribe('/topic/tracks', (message: IMessage) => {
+        try {
+          const trackEvent: TrackEvent = JSON.parse(message.body);
+          callback(trackEvent);
+        } catch (error) {
+          console.error('Error parsing track event:', error);
+        }
+      });
+
+      return () => {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from tracks:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error subscribing to tracks:', error);
+      return () => {};
+    }
   }
 
   public subscribeToMessages(callback: WebSocketCallback<ChatMessage>): () => void {
@@ -99,16 +114,31 @@ export class WebSocketService {
       return () => {};
     }
 
-    const subscription = this.client.subscribe('/topic/messages', (message: IMessage) => {
-      try {
-        const chatMessage: ChatMessage = JSON.parse(message.body);
-        callback(chatMessage);
-      } catch (error) {
-        console.error('Error parsing chat message:', error);
-      }
-    });
+    if (!this.connected) {
+      console.warn('WebSocket not connected yet, subscription may fail');
+    }
 
-    return () => subscription.unsubscribe();
+    try {
+      const subscription = this.client.subscribe('/topic/messages', (message: IMessage) => {
+        try {
+          const chatMessage: ChatMessage = JSON.parse(message.body);
+          callback(chatMessage);
+        } catch (error) {
+          console.error('Error parsing chat message:', error);
+        }
+      });
+
+      return () => {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from messages:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error subscribing to messages:', error);
+      return () => {};
+    }
   }
 
   public isConnected(): boolean {
