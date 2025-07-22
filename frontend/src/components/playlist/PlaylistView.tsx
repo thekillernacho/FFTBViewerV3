@@ -87,64 +87,55 @@ const PlaylistView: React.FC = () => {
     setCurrentPage(0);
   };
 
-  if (loading) {
-    return (
-      <div className={styles.playlistContainer}>
-        <div className={styles.loading}>Loading playlist...</div>
-      </div>
-    );
-  }
+  const renderPlaylistContent = () => {
+    if (loading) {
+      return <div className={styles.loading}>Loading playlist...</div>;
+    }
 
-  if (error) {
-    return (
-      <div className={styles.playlistContainer}>
-        <div className={styles.error}>{error}</div>
-      </div>
-    );
-  }
+    if (error) {
+      return <div className={styles.error}>{error}</div>;
+    }
 
-  if (!playlistData) {
-    return (
-      <div className={styles.playlistContainer}>
-        <div className={styles.error}>No playlist data available</div>
-      </div>
-    );
-  }
+    if (!playlistData) {
+      return <div className={styles.error}>No playlist data available</div>;
+    }
 
-  return (
-    <div className={styles.playlistContainer}>
-      <CurrentTrack className={styles.currentTrack} />
-      
-      <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
-      
-      <SongTable 
-        songs={playlistData?.songs || []}
-        sortBy={sortBy}
-        sortDirection={sortDirection}
-        onSort={handleSort}
-      />
-      
-      <div className={styles.playlistFooter}>
-        {playlistData && (
-          <PlaylistStats 
-            totalSongs={playlistData.totalSongs || 0}
-            showingSongs={playlistData.songs?.length || 0}
-            latestSongTime={latestSongTime}
-            totalPlays={totalPlays}
-            trackingStartDate={trackingStartDate}
-          />
-        )}
+    return (
+      <>
+        <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
         
-        <Pagination
+        <SongTable 
+          songs={playlistData?.songs || []}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+        />
+
+        <Pagination 
           currentPage={currentPage}
           totalPages={playlistData?.totalPages || 0}
-          pageSize={pageSize}
           onPageChange={handlePageChange}
+          pageSize={pageSize}
           onPageSizeChange={handlePageSizeChange}
           hasNext={playlistData?.hasNext ?? false}
           hasPrevious={playlistData?.hasPrevious ?? false}
         />
-      </div>
+
+        <PlaylistStats 
+          totalSongs={playlistData?.totalElements || 0}
+          showingSongs={playlistData?.songs?.length || 0}
+          latestSongTime={latestSongTime}
+          totalPlays={totalPlays}
+          trackingStartDate={trackingStartDate}
+        />
+      </>
+    );
+  };
+
+  return (
+    <div className={styles.playlistContainer}>
+      <CurrentTrack className={styles.currentTrack} />
+      {renderPlaylistContent()}
     </div>
   );
 };
