@@ -5,6 +5,7 @@ import SearchBar from './SearchBar';
 import SongTable from './SongTable';
 import Pagination from './Pagination';
 import PlaylistStats from './PlaylistStats';
+import CurrentTrack from './CurrentTrack';
 const styles = require('../../styles/PlaylistView.module.css');
 
 const PlaylistView: React.FC = () => {
@@ -112,6 +113,8 @@ const PlaylistView: React.FC = () => {
 
   return (
     <div className={styles.playlistContainer}>
+      <CurrentTrack className={styles.currentTrack} />
+      
       <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
       
       <SongTable 

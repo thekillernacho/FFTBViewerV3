@@ -50,6 +50,9 @@ public class ChatEventHandler {
             if (trackPlayEvent != null) {
                 logger.info("Track play event detected: {}", trackPlayEvent);
                 
+                // Broadcast track event via WebSocket to all subscribers
+                messagingTemplate.convertAndSend("/topic/tracks", trackPlayEvent);
+                
                 // Asynchronously update the database
                 songPlayTracker.trackSongPlayAsync(trackPlayEvent)
                     .thenAccept(success -> {
