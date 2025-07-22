@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service to track song plays from TrackPlayEvent and update occurrence counts
@@ -35,6 +36,9 @@ public class SongPlayTracker {
     
     @Value("${track.play.deduplication.seconds:10}")
     private int deduplicationSeconds;
+    
+    // Thread-safe map to prevent concurrent processing of the same song
+    private final ConcurrentHashMap<String, Object> songLocks = new ConcurrentHashMap<>();
     
     /**
      * Asynchronously track a song play and update its occurrence count
@@ -57,12 +61,32 @@ public class SongPlayTracker {
                 return CompletableFuture.completedFuture(true);
             }
             
-            // Full database update mode
-            boolean result = trackSongPlay(event.getSongTitle());
+            // Full database update mode with synchronization to prevent race conditions
+            boolean result = trackSongPlaySynchronized(event.getSongTitle());
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
             logger.error("Error tracking song play asynchronously: {}", e.getMessage(), e);
             return CompletableFuture.completedFuture(false);
+        }
+    }
+    
+    /**
+     * Track a song play with synchronization to prevent race conditions
+     * @param songTitle The title of the song that was played
+     * @return true if the song was found and updated, false otherwise
+     */
+    private boolean trackSongPlaySynchronized(String songTitle) {
+        // Use song title as lock key to prevent concurrent processing of same song
+        Object lock = songLocks.computeIfAbsent(songTitle, k -> new Object());
+        
+        synchronized (lock) {
+            try {
+                return trackSongPlay(songTitle);
+            } finally {
+                // Clean up lock if no other threads are waiting
+                // Only remove if the same object is still in the map
+                songLocks.remove(songTitle, lock);
+            }
         }
     }
     
