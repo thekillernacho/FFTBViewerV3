@@ -44,10 +44,19 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
 
   useEffect(() => {
     // Subscribe to real-time track events via WebSocket
-    const unsubscribe = webSocketService.subscribeToTracks((trackEvent: TrackEvent) => {
+    const unsubscribe = webSocketService.subscribeToTracks((trackEvent: any) => {
       console.log('Received track event via WebSocket:', trackEvent);
-      setCurrentTrack(trackEvent);
-      setTimeRemaining(trackEvent.duration);
+      
+      // Convert backend format to frontend format
+      const normalizedEvent: TrackEvent = {
+        songTitle: trackEvent.songTitle,
+        duration: trackEvent.durationSeconds || trackEvent.duration || 0,
+        username: trackEvent.username || '',
+        time: trackEvent.time || new Date().toISOString()
+      };
+      
+      setCurrentTrack(normalizedEvent);
+      setTimeRemaining(normalizedEvent.duration);
       setLoading(false);
     });
 
