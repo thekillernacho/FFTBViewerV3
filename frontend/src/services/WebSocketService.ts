@@ -81,13 +81,35 @@ export class WebSocketService {
       return () => {};
     }
 
+    // If not connected yet, wait for connection
     if (!this.connected) {
-      console.warn('WebSocket not connected yet, subscription may fail');
+      console.warn('WebSocket not connected yet, waiting for connection...');
+      const waitForConnection = () => {
+        setTimeout(() => {
+          if (this.connected && this.client) {
+            this.performTrackSubscription(callback);
+          } else if (this.client) {
+            waitForConnection();
+          }
+        }, 100);
+      };
+      waitForConnection();
+      return () => {}; // Return empty unsubscribe function for now
+    }
+
+    return this.performTrackSubscription(callback);
+  }
+
+  private performTrackSubscription(callback: WebSocketCallback<TrackEvent>): () => void {
+    if (!this.client) {
+      return () => {};
     }
 
     try {
+      console.log('Subscribing to /topic/tracks...');
       const subscription = this.client.subscribe('/topic/tracks', (message: IMessage) => {
         try {
+          console.log('Received track event:', message.body);
           const trackEvent: TrackEvent = JSON.parse(message.body);
           callback(trackEvent);
         } catch (error) {
@@ -95,9 +117,11 @@ export class WebSocketService {
         }
       });
 
+      console.log('Successfully subscribed to /topic/tracks');
       return () => {
         try {
           subscription.unsubscribe();
+          console.log('Unsubscribed from /topic/tracks');
         } catch (error) {
           console.warn('Error unsubscribing from tracks:', error);
         }
