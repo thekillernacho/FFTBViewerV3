@@ -39,14 +39,13 @@ const PlaylistView: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const [data, statsResponse, latestTimeResponse] = await Promise.all([
+        const [data, statusResponse] = await Promise.all([
           PlaylistService.getSongsWithTrackPlays(currentPage, pageSize, sortBy, sortDirection, debouncedSearchTerm),
-          PlaylistService.getStats(),
-          PlaylistService.getLatestSongTime()
+          PlaylistService.getPlaylistStatus()
         ]);
         
         setPlaylistData(data);
-        setLatestSongTime(latestTimeResponse.timestamp);
+        setLatestSongTime(statusResponse.lastSyncTime);
       } catch (err) {
         console.error('Error loading playlist data:', err);
         setError('Failed to load playlist data. Please try again.');

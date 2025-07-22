@@ -54,7 +54,7 @@ const PlaylistStats: React.FC<PlaylistStatsProps> = ({ totalSongs, showingSongs,
       </div>
       {latestSongTime && (
         <div className="stat-item">
-          <div className="stat-label">Last Updated</div>
+          <div className="stat-label">Last Sync</div>
           <div className="stat-value">{formattedTime}</div>
         </div>
       )}

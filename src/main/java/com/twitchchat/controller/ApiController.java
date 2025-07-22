@@ -8,6 +8,7 @@ import com.twitchchat.service.PlaylistService;
 import com.twitchchat.service.SongPlayTracker;
 import com.twitchchat.service.SongPlayCountViewService;
 import com.twitchchat.dto.SongWithTrackPlayCount;
+import com.twitchchat.playlist.sync.PlaylistSyncAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +42,9 @@ public class ApiController {
     
     @Autowired
     private SongPlayCountViewService songPlayCountViewService;
+    
+    @Autowired
+    private PlaylistSyncAuditService playlistSyncAuditService;
 
     /**
      * Get playlist status and statistics
@@ -54,11 +58,15 @@ public class ApiController {
         long totalPlays = songPlayTracker.getTotalPlays();
         long playedSongs = songPlayTracker.getPlayedSongsCount();
         
+        // Get the last sync completion time
+        String lastSyncTime = playlistSyncAuditService.getLastSyncCompletionTime();
+        
         status.put("totalSongs", totalSongs);
         status.put("isAvailable", isAvailable);
         status.put("status", isAvailable ? "ready" : "syncing");
         status.put("totalPlays", totalPlays);
         status.put("playedSongs", playedSongs);
+        status.put("lastSyncTime", lastSyncTime);
         
         return ResponseEntity.ok(status);
     }
