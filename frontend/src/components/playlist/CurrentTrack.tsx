@@ -49,19 +49,28 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
   useEffect(() => {
     // Subscribe to real-time track events via WebSocket
     const unsubscribe = webSocketService.subscribeToTracks((trackEvent: any) => {
-      console.log('🎵 Received track event via WebSocket:', trackEvent);
+      console.log('🎵 Raw WebSocket message received:', trackEvent);
+      console.log('🎵 WebSocket message type:', typeof trackEvent);
+      console.log('🎵 WebSocket message keys:', Object.keys(trackEvent || {}));
       
-      // Convert backend format to frontend format
-      const normalizedEvent: TrackEvent = {
-        songTitle: trackEvent.songTitle,
-        duration: trackEvent.durationSeconds || trackEvent.duration || 0,
-        username: trackEvent.username || '',
-        time: trackEvent.time || new Date().toISOString()
-      };
-      
-      setCurrentTrack(normalizedEvent);
-      setTimeRemaining(normalizedEvent.duration);
-      setLoading(false);
+      try {
+        // Convert backend format to frontend format
+        const normalizedEvent: TrackEvent = {
+          songTitle: trackEvent.songTitle || '',
+          duration: trackEvent.durationSeconds || trackEvent.duration || 0,
+          username: trackEvent.username || '',
+          time: trackEvent.eventTime || trackEvent.time || new Date().toISOString()
+        };
+        
+        console.log('🎵 Normalized track event:', normalizedEvent);
+        
+        setCurrentTrack(normalizedEvent);
+        setTimeRemaining(normalizedEvent.duration);
+        setLoading(false);
+        setConnectionStatus('connected');
+      } catch (error) {
+        console.error('🎵 Error processing track event:', error);
+      }
     });
 
     // Monitor WebSocket connection status
