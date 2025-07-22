@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["redis"]
 
 [workflows]
-runButton = "Run Server"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -30,7 +30,11 @@ args = "Run Server"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Run Server (Dev)"
+args = "Working Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Final Server"
 
 [[workflows.workflow]]
 name = "Quick Tests"
@@ -66,13 +70,22 @@ args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "Run Server (Dev)"
+name = "Working Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5001 --spring.profiles.active=dev"
+args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -Dspring.profiles.active=dev -Dlogging.level.root=WARN -jar target/twitch-chat-reader-1.0.0.jar --server.port=5001"
 waitForPort = 5001
+
+[[workflows.workflow]]
+name = "Final Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -Dspring.profiles.active=dev -Dlogging.level.root=ERROR -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
