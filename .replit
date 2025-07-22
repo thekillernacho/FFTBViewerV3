@@ -27,6 +27,10 @@ args = "Frontend Tests"
 task = "workflow.run"
 args = "Run Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run Server (Dev)"
+
 [[workflows.workflow]]
 name = "Quick Tests"
 author = "agent"
@@ -59,6 +63,15 @@ author = "agent"
 task = "shell.exec"
 args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000 --spring.profiles.active=prod"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Run Server (Dev)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5001 --spring.profiles.active=dev"
+waitForPort = 5001
 
 [[ports]]
 localPort = 5000
