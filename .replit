@@ -2,6 +2,7 @@ modules = ["java", "java-21", "maven", "postgresql-16", "java-11", "python-3.11"
 
 [nix]
 channel = "stable-24_05"
+packages = ["redis"]
 
 [workflows]
 runButton = "Project"
@@ -76,6 +77,10 @@ waitForPort = 5001
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "gce"
