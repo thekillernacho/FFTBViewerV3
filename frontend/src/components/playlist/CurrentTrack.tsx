@@ -31,8 +31,8 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
           };
           
           setCurrentTrack(trackEvent);
-          // Only show remaining time if track is actively playing
-          setTimeRemaining(trackData.hasTrack ? (trackData.remainingSeconds || null) : null);
+          // Always set time remaining - could be positive (active), zero (just finished), or negative (overtime)
+          setTimeRemaining(trackData.remainingSeconds !== undefined ? trackData.remainingSeconds : 0);
         } else {
           // No track data available
           setCurrentTrack(null);
@@ -147,7 +147,10 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
   }
 
   const elapsed = currentTrack.duration - (timeRemaining || 0);
-  const progressPercent = timeRemaining !== null ? formatProgress(timeRemaining, currentTrack.duration) : 100;
+  // If time remaining is less than 1 second, show progress bar as 100% full
+  const progressPercent = timeRemaining !== null && timeRemaining >= 1 
+    ? formatProgress(timeRemaining, currentTrack.duration) 
+    : 100;
 
   return (
     <div className={`current-track-container ${className || ''}`}>
@@ -161,26 +164,23 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
         
         <div className="current-track-details">
           <div className="track-timing">
-            {timeRemaining !== null ? (
-              <>
-                <span className="time-elapsed">{formatTime(elapsed)}</span>
-                <span className="time-separator"> / </span>
-                <span className="time-total">{formatTime(currentTrack.duration)}</span>
-                <span className="time-remaining"> ({formatTime(timeRemaining)} remaining)</span>
-              </>
-            ) : (
-              <span className="time-total">{formatTime(currentTrack.duration)}</span>
+            <span className="time-elapsed">{formatTime(elapsed)}</span>
+            <span className="time-separator"> / </span>
+            <span className="time-total">{formatTime(currentTrack.duration)}</span>
+            {timeRemaining !== null && timeRemaining > 0 && (
+              <span className="time-remaining"> ({formatTime(timeRemaining)} remaining)</span>
+            )}
+            {timeRemaining !== null && timeRemaining <= 0 && (
+              <span className="time-overtime"> ({formatTime(Math.abs(timeRemaining))} overtime)</span>
             )}
           </div>
           
-          {timeRemaining !== null && (
-            <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${progressPercent}%` }}
-              ></div>
-            </div>
-          )}
+          <div className="progress-bar">
+            <div 
+              className="progress-fill" 
+              style={{ width: `${progressPercent}%` }}
+            ></div>
+          </div>
         </div>
       </div>
     </div>

@@ -53,6 +53,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 22, 2025 - Fancy Duration Display Fix - COMPLETED:**
+- **RESOLVED PROGRESS BAR ISSUE**: Fixed "fancy song duration thing" not working by updating timeRemaining logic to always show progress bar
+- **IMPLEMENTED 100% PROGRESS FOR FINISHED TRACKS**: Progress bar now displays at 100% full when time remaining is less than 1 second
+- **ADDED OVERTIME DISPLAY**: Finished tracks now show negative time remaining as "(overtime)" instead of hiding timing information
+- **ENHANCED TIMING CALCULATIONS**: Modified progress bar logic to work for both active tracks (countdown) and finished tracks (100% + overtime)
+- **PERSISTENT DURATION DISPLAY**: Frontend now shows fancy duration features regardless of track playback status
+- **FIXED TIMEREMAINING NULL ISSUE**: Updated logic to set timeRemaining based on API data rather than hasTrack boolean status
+
 **July 22, 2025 - Frontend Track Display Logic Fix - COMPLETED:**
 - **RESOLVED FRONTEND DISPLAY ISSUE**: Fixed CurrentTrack component to show track information regardless of hasTrack boolean status
 - **MODIFIED COMPONENT LOGIC**: Removed dependency on hasTrack=true requirement for displaying current track data from API
