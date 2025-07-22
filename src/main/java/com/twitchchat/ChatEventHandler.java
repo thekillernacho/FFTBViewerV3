@@ -58,6 +58,7 @@ public class ChatEventHandler {
                 currentTrackService.updateCurrentTrack(trackPlayEvent);
                 
                 // Broadcast track event via WebSocket to all subscribers
+                logger.info("Broadcasting track event to /topic/tracks: {}", trackPlayEvent);
                 messagingTemplate.convertAndSend("/topic/tracks", trackPlayEvent);
                 
                 // Asynchronously update the database

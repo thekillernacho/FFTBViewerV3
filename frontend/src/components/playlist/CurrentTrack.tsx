@@ -49,7 +49,7 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
   useEffect(() => {
     // Subscribe to real-time track events via WebSocket
     const unsubscribe = webSocketService.subscribeToTracks((trackEvent: any) => {
-      console.log('Received track event via WebSocket:', trackEvent);
+      console.log('🎵 Received track event via WebSocket:', trackEvent);
       
       // Convert backend format to frontend format
       const normalizedEvent: TrackEvent = {
