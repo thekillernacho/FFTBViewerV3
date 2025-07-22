@@ -31,6 +31,10 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
           
           setCurrentTrack(trackEvent);
           setTimeRemaining(trackData.remainingSeconds || null);
+        } else {
+          // No current track or track finished
+          setCurrentTrack(null);
+          setTimeRemaining(null);
         }
       } catch (error) {
         console.error('Failed to load current track:', error);
@@ -124,8 +128,8 @@ const CurrentTrack: React.FC<CurrentTrackProps> = ({ className }) => {
     return (
       <div className={`current-track-container ${className || ''}`}>
         <div className="current-track-waiting">
-          <span className="status-indicator connecting">●</span>
-          <span>Waiting for track information...</span>
+          <span className="status-indicator waiting">●</span>
+          <span>No track currently playing</span>
         </div>
       </div>
     );
