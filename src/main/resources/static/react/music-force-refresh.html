@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>FFT Battleground Music - FORCE CACHE BUST v25</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- MAXIMUM CACHE BUSTING HEADERS -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, private, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="X-Accel-Expires" content="0">
+    <meta name="cache-control" content="no-cache">
+    
+    <!-- FORCE NEW BUNDLE WITH TIMESTAMP -->
+    <script defer="defer" src="/dist/bundle.ec6961da3229bb3bbff9.js?v25-force-bust=1737653200000"></script>
+    <link href="/dist/styles.40c431d1787535512dfd.css?v25-force-bust=1737653200000" rel="stylesheet">
+    
+    <!-- INLINE STYLES TO OVERRIDE ANY CACHED CSS -->
+    <style>
+        .search-container-v25 {
+            background-color: #ff0000 !important;
+            border: 5px solid #00ff00 !important;
+            padding: 20px !important;
+            margin: 20px 0 !important;
+            border-radius: 10px !important;
+        }
+        .search-input-v25 {
+            flex: 1 !important;
+            padding: 15px !important;
+            font-size: 16px !important;
+            border: 3px solid #ffff00 !important;
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            border-radius: 5px !important;
+        }
+        .search-button-v25 {
+            padding: 15px 25px !important;
+            font-size: 16px !important;
+            font-weight: bold !important;
+            background-color: #00ff00 !important;
+            color: #000000 !important;
+            border: none !important;
+            border-radius: 5px !important;
+            cursor: pointer !important;
+        }
+        .manual-search-indicator {
+            color: #ffffff !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+            margin-bottom: 10px !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- AGGRESSIVE CACHE CLEARING SCRIPT -->
+    <script>
+        console.log('FORCE CACHE BUST v25 - Loading...');
+        
+        // Clear all possible caches
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                    console.log('Deleting cache:', name);
+                    caches.delete(name);
+                });
+            });
+        }
+        
+        // Clear localStorage and sessionStorage
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch (e) {
+            console.log('Storage clear failed:', e);
+        }
+        
+        // Force page reload if not already force-refreshed
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.has('force-refreshed')) {
+            const newUrl = window.location.pathname + '?force-refreshed=true&t=' + Date.now();
+            console.log('Force refreshing to:', newUrl);
+            window.location.replace(newUrl);
+        }
+        
+        console.log('Cache busting complete - page should load with manual search only');
+    </script>
+</body>
+</html>
