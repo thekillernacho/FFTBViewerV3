@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface SearchBarProps {
   onSearch: (term: string) => void;
@@ -6,17 +6,27 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ onSearch, searchTerm }) => {
+  const [inputValue, setInputValue] = useState<string>(searchTerm);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Search is handled by onChange, no need to do anything here
+    onSearch(inputValue);
   };
 
   const handleClear = () => {
+    setInputValue('');
     onSearch('');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearch(e.target.value);
+    setInputValue(e.target.value);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSearch(inputValue);
+    }
   };
 
   return (
@@ -25,12 +35,20 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, searchTerm }) => {
         <div className="search-input-group">
           <input
             type="text"
-            value={searchTerm}
+            value={inputValue}
             onChange={handleChange}
-            placeholder="Search songs..."
+            onKeyPress={handleKeyPress}
+            placeholder="Search songs... (Press Enter or click Search)"
             className="search-input"
           />
-          {searchTerm && (
+          <button 
+            type="submit" 
+            className="search-button"
+            aria-label="Search"
+          >
+            🔍
+          </button>
+          {inputValue && (
             <button 
               type="button" 
               onClick={handleClear} 

@@ -20,21 +20,12 @@ const PlaylistView: React.FC = () => {
   const [latestSongTime, setLatestSongTime] = useState<string | null>(null);
   const [totalPlays, setTotalPlays] = useState<number>(0);
   const [trackingStartDate, setTrackingStartDate] = useState<string | null>(null);
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [totalSongs, setTotalSongs] = useState<number>(0);
-
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   // Reset page when search term changes
   useEffect(() => {
     setCurrentPage(0);
-  }, [debouncedSearchTerm]);
+  }, [searchTerm]);
 
   // Load playlist data
   useEffect(() => {
@@ -44,7 +35,7 @@ const PlaylistView: React.FC = () => {
         setError(null);
         
         const [data, statusResponse] = await Promise.all([
-          PlaylistService.getSongsWithTrackPlays(currentPage, pageSize, sortBy, sortDirection, debouncedSearchTerm),
+          PlaylistService.getSongsWithTrackPlays(currentPage, pageSize, sortBy, sortDirection, searchTerm),
           PlaylistService.getPlaylistStatus()
         ]);
         
@@ -65,7 +56,7 @@ const PlaylistView: React.FC = () => {
     };
 
     loadData();
-  }, [currentPage, pageSize, sortBy, sortDirection, debouncedSearchTerm]);
+  }, [currentPage, pageSize, sortBy, sortDirection, searchTerm]);
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
