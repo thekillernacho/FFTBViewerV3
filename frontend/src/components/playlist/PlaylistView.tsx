@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlaylistService } from '../../services/PlaylistService';
 import { PlaylistData, PlaylistDataWithView } from '../../types';
-import { FreshManualSearch } from './FreshManualSearch';
+import { DefinitiveManualSearch } from './DefinitiveManualSearch';
 import SongTable from './SongTable';
 import Pagination from './Pagination';
 import PlaylistStats from './PlaylistStats';
@@ -98,7 +98,7 @@ const PlaylistView: React.FC = () => {
 
     return (
       <>
-        <FreshManualSearch 
+        <DefinitiveManualSearch 
           searchTerm={searchTerm} 
           onSearch={handleSearch} 
           onClear={() => handleSearch('')} 
