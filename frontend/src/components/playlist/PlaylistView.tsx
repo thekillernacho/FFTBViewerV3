@@ -21,6 +21,7 @@ const PlaylistView: React.FC = () => {
   const [totalPlays, setTotalPlays] = useState<number>(0);
   const [trackingStartDate, setTrackingStartDate] = useState<string | null>(null);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  const [totalSongs, setTotalSongs] = useState<number>(0);
 
   // Debounce search term
   useEffect(() => {
@@ -51,6 +52,10 @@ const PlaylistView: React.FC = () => {
         setLatestSongTime(statusResponse.lastSyncTime);
         setTotalPlays(statusResponse.totalPlays || 0);
         setTrackingStartDate(statusResponse.trackingStartDate);
+        // Only update totalSongs if we have valid data to prevent it from being reset to 0
+        if (data && data.totalElements !== undefined && data.totalElements > 0) {
+          setTotalSongs(data.totalElements);
+        }
       } catch (err) {
         console.error('Error loading playlist data:', err);
         setError('Failed to load playlist data. Please try again.');
@@ -122,7 +127,7 @@ const PlaylistView: React.FC = () => {
         />
 
         <PlaylistStats 
-          totalSongs={playlistData?.totalElements || 0}
+          totalSongs={totalSongs}
           showingSongs={playlistData?.songs?.length || 0}
           latestSongTime={latestSongTime}
           totalPlays={totalPlays}
