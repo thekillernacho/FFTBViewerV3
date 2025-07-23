@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlaylistService } from '../../services/PlaylistService';
 import { PlaylistData, PlaylistDataWithView } from '../../types';
-import ButtonSearchBar from './ButtonSearchBar';
+import { FinalSearchBar } from './FinalSearchBar';
 import SongTable from './SongTable';
 import Pagination from './Pagination';
 import PlaylistStats from './PlaylistStats';
@@ -98,7 +98,11 @@ const PlaylistView: React.FC = () => {
 
     return (
       <>
-        <ButtonSearchBar onSearch={handleSearch} searchTerm={searchTerm} />
+        <FinalSearchBar 
+          searchTerm={searchTerm} 
+          onSearch={handleSearch} 
+          onClear={() => handleSearch('')} 
+        />
         
         <SongTable 
           songs={playlistData?.songs || []}
