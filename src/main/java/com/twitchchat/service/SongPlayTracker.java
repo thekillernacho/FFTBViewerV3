@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +34,9 @@ public class SongPlayTracker {
     
     @Autowired
     private TrackPlayProperties trackPlayProperties;
+    
+    @Autowired
+    private Environment environment;
     
     @Value("${track.play.deduplication.seconds:10}")
     private int deduplicationSeconds;
@@ -121,9 +125,10 @@ public class SongPlayTracker {
             // Create and save track play record if enabled
             TrackPlay trackPlay = null;
             if (trackPlayProperties.isRecordTrackPlays()) {
-                trackPlay = new TrackPlay(song);
+                String currentProfile = getCurrentSpringProfile();
+                trackPlay = new TrackPlay(song, currentProfile);
                 trackPlayRepository.save(trackPlay);
-                logger.debug("Created TrackPlay record for '{}' - TrackPlay ID: {}", songTitle, trackPlay.getId());
+                logger.debug("Created TrackPlay record for '{}' - TrackPlay ID: {}, Profile: {}", songTitle, trackPlay.getId(), currentProfile);
             }
             
             logger.info("Tracked play for '{}' - occurrence updates: {}, TrackPlay recording: {}", 
@@ -223,5 +228,17 @@ public class SongPlayTracker {
             logger.error("Error retrieving tracking start date: {}", e.getMessage());
             return null;
         }
+    }
+    
+    /**
+     * Get the current active Spring profile
+     * @return The active Spring profile, defaults to "prod" if no profile is set
+     */
+    private String getCurrentSpringProfile() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        if (activeProfiles.length > 0) {
+            return activeProfiles[0]; // Return the first active profile
+        }
+        return "prod"; // Default to "prod" if no profile is active
     }
 }

@@ -53,6 +53,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**July 26, 2025 - Spring Profile Tracking in TrackPlay Records - COMPLETED:**
+- **IMPLEMENTED SPRING PROFILE AUDIT COLUMN**: Added spring_profile VARCHAR(50) field to track_plays table with NOT NULL constraint and "prod" default value
+- **ENHANCED TRACKPLAY ENTITY**: Updated TrackPlay entity with springProfile field and constructor supporting profile parameter
+- **ENVIRONMENT INJECTION**: Added Spring Environment service to SongPlayTracker to automatically detect current active profile
+- **SMART PROFILE DETECTION**: System captures first active Spring profile or defaults to "prod" if no profile is active
+- **DATABASE MIGRATION COMPLETED**: Successfully added spring_profile column to existing 3,497 track plays with "prod" default value
+- **REAL-TIME VERIFICATION**: Confirmed system working correctly - "dev" profile server creates track plays with "dev" spring_profile value
+- **AUDIT TRAIL CAPABILITY**: Can now track which server environment (dev/prod/test) added each track play for debugging and analysis
+- **BACKWARD COMPATIBILITY**: All existing track plays maintain "prod" profile value, new records automatically capture current environment
+- **COMPREHENSIVE IMPLEMENTATION**: Full end-to-end solution from database schema to service layer with proper profile detection logic
+
 **July 23, 2025 - Search Bar Manual Trigger Implementation - COMPLETED (46 IMPLEMENTATIONS):**
 - **IMPLEMENTED MANUAL SEARCH FUNCTIONALITY**: Search bar now requires explicit user action (Enter key or search button click) instead of automatic searching on text field changes
 - **REMOVED AUTOMATIC SEARCH-ON-TYPING**: Eliminated onChange search triggers that were causing searches with every keystroke
