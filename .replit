@@ -2,7 +2,7 @@ modules = ["java", "java-21", "maven", "java-11", "python-3.11", "nodejs-20", "p
 
 [nix]
 channel = "stable-24_05"
-packages = ["redis", "maven"]
+packages = ["redis", "maven", "jdk11"]
 
 [workflows]
 runButton = "Project"
@@ -84,8 +84,8 @@ externalPort = 3000
 
 [deployment]
 deploymentTarget = "vm"
-run = ["bash", "-c", "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java) || echo /nix/store/*/bin/java | head -1))) && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000 --spring.profiles.active=prod"]
-build = ["bash", "-c", "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java) || echo /nix/store/*/bin/java | head -1))) && export PATH=$JAVA_HOME/bin:$PATH && mvn clean install -Dmaven.test.skip=true"]
+run = ["java", "-jar", "target/twitch-chat-reader-1.0.0.jar", "--server.port=5000", "--spring.profiles.active=prod"]
+build = ["mvn", "clean", "install", "-Dmaven.test.skip=true"]
 
 [agent]
 expertMode = true

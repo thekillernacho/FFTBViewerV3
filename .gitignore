@@ -1,6 +1,6 @@
 # Build artifacts
 target/
-*.jar
+!target/twitch-chat-reader-1.0.0.jar
 *.war
 *.class
 
