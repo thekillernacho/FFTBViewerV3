@@ -69,8 +69,9 @@ public class PlaylistSyncService {
 
     /**
      * Synchronize playlist data from XML feed (synchronized to prevent race conditions)
+     * Note: @Transactional removed to allow individual operations to commit immediately
+     * rather than rolling back all changes if any single operation fails
      */
-    @Transactional
     public void syncPlaylist() {
         synchronized (syncLock) {
             doSyncPlaylist();
@@ -90,6 +91,19 @@ public class PlaylistSyncService {
             }
 
             logger.info("Fetched {} songs from XML feed", xmlSongs.size());
+
+            // DEBUG: Log songs with underscores from XML to verify parsing
+            int underscoreCount = 0;
+            for (Song xmlSong : xmlSongs) {
+                String title = xmlSong.getTitle();
+                if (title != null && title.contains("_")) {
+                    underscoreCount++;
+                    if (underscoreCount <= 5) {
+                        logger.info("UNDERSCORE_DEBUG: Found song with underscore in XML: '{}'", title);
+                    }
+                }
+            }
+            logger.info("UNDERSCORE_DEBUG: Total songs with underscores in XML: {}", underscoreCount);
 
             // Get existing song titles from database (more efficient than loading all songs)
             List<String> existingTitlesList = songRepository.findAllTitles();
@@ -112,11 +126,13 @@ public class PlaylistSyncService {
             // Remove songs that are no longer in the XML feed
             if (!removedTitles.isEmpty()) {
                 logger.info("Found {} songs in database that are missing from XML feed", removedTitles.size());
+                logger.info("SYNC_DEBUG: Starting removal process...");
 
                 // Process removals in batches to avoid memory issues
                 List<String> removedTitlesList = new ArrayList<>(removedTitles);
                 int batchSize = 100;
                 int totalBatches = (int) Math.ceil((double) removedTitlesList.size() / batchSize);
+                logger.info("SYNC_DEBUG: Will process {} removal batches", totalBatches);
 
                 for (int i = 0; i < removedTitlesList.size(); i += batchSize) {
                     int endIndex = Math.min(i + batchSize, removedTitlesList.size());
@@ -124,15 +140,38 @@ public class PlaylistSyncService {
                     int currentBatch = (i / batchSize) + 1;
 
                     try {
-                        int deletedCount = songRepository.deleteByTitleIn(batch);
+                        logger.info("SYNC_DEBUG: About to delete batch {} with {} songs: {}", currentBatch, batch.size(), batch);
+                        logger.info("SYNC_DEBUG: Entering deletion loop for batch {}", currentBatch);
+                        // Delete songs one by one to avoid transaction blocking
+                        int deletedCount = 0;
+                        int processedCount = 0;
+                        for (String title : batch) {
+                            processedCount++;
+                            logger.info("SYNC_DEBUG: Processing song {}/{}: '{}'", processedCount, batch.size(), title);
+                            try {
+                                logger.info("SYNC_DEBUG: Calling deleteByTitle for '{}'", title);
+                                int deleted = songRepository.deleteByTitle(title);
+                                if (deleted > 0) {
+                                    deletedCount++;
+                                    logger.info("SYNC_DEBUG: Deleted song: '{}' (rows: {})", title, deleted);
+                                } else {
+                                    logger.info("SYNC_DEBUG: Song not found in DB: '{}'", title);
+                                }
+                            } catch (Exception deleteError) {
+                                logger.warn("SYNC_DEBUG: Failed to delete song '{}': {}", title, deleteError.getMessage(), deleteError);
+                            }
+                        }
+                        logger.info("SYNC_DEBUG: Loop completed - processed {} songs, deleted {}", processedCount, deletedCount);
                         logger.info("Removal batch {}/{} completed: Deleted {} songs", 
                                   currentBatch, totalBatches, deletedCount);
                     } catch (Exception e) {
-                        logger.error("Error removing songs in batch {}/{}", currentBatch, totalBatches, e);
+                        logger.error("SYNC_DEBUG: Error in removal batch {}/{}: {}", currentBatch, totalBatches, e.getMessage(), e);
                     }
                 }
 
                 logger.info("Successfully removed {} songs that were missing from XML feed", removedTitles.size());
+            } else {
+                logger.info("SYNC_DEBUG: No songs to remove from database");
             }
 
             // Check for duration discrepancies between XML and database
@@ -155,6 +194,18 @@ public class PlaylistSyncService {
                     }
                 }
             }
+
+            // DEBUG: Log underscore songs that should be added
+            int underscoreNewCount = 0;
+            for (Song newSong : newSongs) {
+                if (newSong.getTitle().contains("_")) {
+                    underscoreNewCount++;
+                    if (underscoreNewCount <= 5) {
+                        logger.info("UNDERSCORE_DEBUG: Adding new song with underscore: '{}'", newSong.getTitle());
+                    }
+                }
+            }
+            logger.info("UNDERSCORE_DEBUG: Total new songs with underscores to add: {}", underscoreNewCount);
 
             if (!newSongs.isEmpty()) {
                 logger.info("Processing {} new songs for database insertion", newSongs.size());
@@ -308,50 +359,56 @@ public class PlaylistSyncService {
 
     /**
      * Check for duration discrepancies between XML source and database
+     * OPTIMIZED: Uses batch query instead of N individual queries
      */
     private void checkDurationDiscrepancies(List<Song> xmlSongs, Set<String> existingTitles) {
-        logger.info("Checking for duration discrepancies...");
+        logger.info("Checking for duration discrepancies (optimized batch query)...");
 
-        int discrepancyCount = 0;
-        int fixedCount = 0;
-
-        for (Song xmlSong : xmlSongs) {
-            String title = xmlSong.getTitle();
-            if (title != null && !title.trim().isEmpty() && existingTitles.contains(title)) {
-                try {
-                    // Find the existing song in database
-                    Optional<Song> existingSong = songRepository.findByTitle(title);
-                    if (existingSong.isPresent()) {
-                        String dbDuration = existingSong.get().getDuration();
-                        String xmlDuration = xmlSong.getDuration();
-
-                        // Check for problematic durations
-                        if (dbDuration != null && (dbDuration.equals("0:00") || dbDuration.contains("-1"))) {
-                            discrepancyCount++;
-                            logger.warn("Duration discrepancy found for '{}': DB='{}', XML='{}'", 
-                                      title, dbDuration, xmlDuration);
-
-                            // Fix the duration if XML has valid duration
-                            if (xmlDuration != null && !xmlDuration.equals("0:00") && !xmlDuration.contains("-1")) {
-                                int updated = songRepository.updateDurationByTitle(title, xmlDuration, dbDuration);
-                                if (updated > 0) {
-                                    fixedCount++;
-                                    logger.info("Fixed duration for '{}': '{}' -> '{}'", title, dbDuration, xmlDuration);
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.error("Error checking duration for song: {}", title, e);
+        try {
+            // Step 1: Build a map of XML songs by title for quick lookup
+            Map<String, String> xmlDurationsByTitle = new HashMap<>();
+            for (Song xmlSong : xmlSongs) {
+                String title = xmlSong.getTitle();
+                if (title != null && !title.trim().isEmpty() && xmlSong.getDuration() != null) {
+                    xmlDurationsByTitle.put(title, xmlSong.getDuration());
                 }
             }
-        }
+            
+            // Step 2: Fetch only songs with problematic durations in ONE query
+            List<Song> problematicSongs = songRepository.findSongsWithProblematicDurations();
+            logger.info("Found {} songs with problematic durations (0:00 or -1)", problematicSongs.size());
+            
+            int fixedCount = 0;
+            int discrepancyCount = problematicSongs.size();
+            
+            // Step 3: Update durations for songs where XML has valid duration
+            for (Song dbSong : problematicSongs) {
+                String title = dbSong.getTitle();
+                String xmlDuration = xmlDurationsByTitle.get(title);
+                
+                if (xmlDuration != null && !xmlDuration.equals("0:00") && !xmlDuration.contains("-1")) {
+                    try {
+                        int updated = songRepository.updateDurationForTitle(title, xmlDuration);
+                        if (updated > 0) {
+                            fixedCount++;
+                            if (fixedCount <= 5) {
+                                logger.info("Fixed duration for '{}': '{}' -> '{}'", title, dbSong.getDuration(), xmlDuration);
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Could not update duration for '{}': {}", title, e.getMessage());
+                    }
+                }
+            }
 
-        if (discrepancyCount > 0) {
-            logger.info("Duration discrepancy check completed: {} discrepancies found, {} fixed", 
-                      discrepancyCount, fixedCount);
-        } else {
-            logger.info("No duration discrepancies found");
+            if (discrepancyCount > 0) {
+                logger.info("Duration discrepancy check completed: {} discrepancies found, {} fixed", 
+                          discrepancyCount, fixedCount);
+            } else {
+                logger.info("No duration discrepancies found");
+            }
+        } catch (Exception e) {
+            logger.error("Error during duration discrepancy check: {}", e.getMessage());
         }
     }
 

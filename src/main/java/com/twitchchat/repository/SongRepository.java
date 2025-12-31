@@ -95,6 +95,14 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     int deleteByTitleIn(@Param("titles") List<String> titles);
     
     /**
+     * Delete a single song by title (individual transactional delete)
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query(value = "DELETE FROM songs WHERE title = :title", nativeQuery = true)
+    int deleteByTitle(@Param("title") String title);
+    
+    /**
      * Get the timestamp of the most recently added song
      */
     @Query("SELECT MAX(s.createdAt) FROM Song s")
@@ -123,4 +131,19 @@ public interface SongRepository extends JpaRepository<Song, Long> {
      */
     @Query("SELECT s FROM Song s WHERE LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) ORDER BY s.updatedAt ASC NULLS LAST")
     Page<Song> findByTitleContainingIgnoreCaseOrderByUpdatedAtAscNullsLast(@Param("searchTerm") String searchTerm, Pageable pageable);
+    
+    /**
+     * Find all songs with problematic durations (0:00 or containing -1)
+     * This is used for batch duration discrepancy checking
+     */
+    @Query("SELECT s FROM Song s WHERE s.duration = '0:00' OR s.duration LIKE '%-1%'")
+    List<Song> findSongsWithProblematicDurations();
+    
+    /**
+     * Batch update durations for multiple songs
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Song s SET s.duration = :newDuration WHERE s.title = :title")
+    int updateDurationForTitle(@Param("title") String title, @Param("newDuration") String newDuration);
 }

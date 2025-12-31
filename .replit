@@ -2,7 +2,7 @@ modules = ["java", "java-21", "maven", "java-11", "python-3.11", "nodejs-20", "p
 
 [nix]
 channel = "stable-24_05"
-packages = ["redis"]
+packages = ["redis", "maven"]
 
 [workflows]
 runButton = "Project"
