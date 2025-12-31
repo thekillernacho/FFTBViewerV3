@@ -121,14 +121,6 @@ const PlaylistView: React.FC = () => {
         <h2>Music Playlist</h2>
       </div>
 
-      <PlaylistStats
-        totalSongs={displayTotalSongs}
-        showingSongs={state.songs.length}
-        latestSongTime={statusData?.lastSyncTime}
-        totalPlays={statusData?.totalPlays}
-        trackingStartDate={statusData?.trackingStartDate}
-      />
-
       <SimpleSearchWithButton
         searchTerm={searchTerm}
         onSearch={handleSearch}
@@ -161,6 +153,14 @@ const PlaylistView: React.FC = () => {
             onPageSizeChange={handlePageSizeChange}
             hasNext={state.hasNext}
             hasPrevious={state.hasPrevious}
+          />
+
+          <PlaylistStats
+            totalSongs={displayTotalSongs}
+            showingSongs={state.songs.length}
+            latestSongTime={statusData?.lastSyncTime}
+            totalPlays={statusData?.totalPlays}
+            trackingStartDate={statusData?.trackingStartDate}
           />
         </>
       )}
