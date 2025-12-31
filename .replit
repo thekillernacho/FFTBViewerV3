@@ -84,8 +84,13 @@ externalPort = 3000
 
 [deployment]
 deploymentTarget = "vm"
-run = ["bash", "-c", "export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000 --spring.profiles.active=prod"]
-build = ["bash", "-c", "export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PWD/maven/bin:$PATH && mvn clean install -Dmaven.test.skip=true"]
+run = ["bash", "-c", "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java) || echo /nix/store/*/bin/java | head -1))) && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000 --spring.profiles.active=prod"]
+build = ["bash", "-c", "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java) || echo /nix/store/*/bin/java | head -1))) && export PATH=$JAVA_HOME/bin:$PATH && mvn clean install -Dmaven.test.skip=true"]
 
 [agent]
 expertMode = true
+
+[userenv]
+
+[userenv.production]
+JAVA_HOME = "/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11"
