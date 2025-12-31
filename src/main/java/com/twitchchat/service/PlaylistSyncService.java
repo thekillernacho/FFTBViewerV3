@@ -2,6 +2,7 @@ package com.twitchchat.service;
 
 import com.twitchchat.model.Song;
 import com.twitchchat.repository.SongRepository;
+import com.twitchchat.repository.TrackPlayRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ public class PlaylistSyncService {
 
     @Autowired
     private SongRepository songRepository;
+    
+    @Autowired
+    private TrackPlayRepository trackPlayRepository;
 
     /**
      * Initial sync when application starts (async to avoid blocking startup)
@@ -141,24 +145,31 @@ public class PlaylistSyncService {
 
                     try {
                         logger.info("SYNC_DEBUG: About to delete batch {} with {} songs: {}", currentBatch, batch.size(), batch);
+                        
+                        // First, delete associated track plays to avoid foreign key constraint violations
+                        try {
+                            int deletedTrackPlays = trackPlayRepository.deleteBySongTitleIn(batch);
+                            if (deletedTrackPlays > 0) {
+                                logger.info("SYNC_DEBUG: Deleted {} track plays for batch {}", deletedTrackPlays, currentBatch);
+                            }
+                        } catch (Exception trackPlayError) {
+                            logger.warn("SYNC_DEBUG: Error deleting track plays for batch {}: {}", currentBatch, trackPlayError.getMessage());
+                        }
+                        
                         logger.info("SYNC_DEBUG: Entering deletion loop for batch {}", currentBatch);
                         // Delete songs one by one to avoid transaction blocking
                         int deletedCount = 0;
                         int processedCount = 0;
                         for (String title : batch) {
                             processedCount++;
-                            logger.info("SYNC_DEBUG: Processing song {}/{}: '{}'", processedCount, batch.size(), title);
                             try {
-                                logger.info("SYNC_DEBUG: Calling deleteByTitle for '{}'", title);
                                 int deleted = songRepository.deleteByTitle(title);
                                 if (deleted > 0) {
                                     deletedCount++;
-                                    logger.info("SYNC_DEBUG: Deleted song: '{}' (rows: {})", title, deleted);
-                                } else {
-                                    logger.info("SYNC_DEBUG: Song not found in DB: '{}'", title);
+                                    logger.debug("SYNC_DEBUG: Deleted song: '{}' (rows: {})", title, deleted);
                                 }
                             } catch (Exception deleteError) {
-                                logger.warn("SYNC_DEBUG: Failed to delete song '{}': {}", title, deleteError.getMessage(), deleteError);
+                                logger.warn("SYNC_DEBUG: Failed to delete song '{}': {}", title, deleteError.getMessage());
                             }
                         }
                         logger.info("SYNC_DEBUG: Loop completed - processed {} songs, deleted {}", processedCount, deletedCount);
