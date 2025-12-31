@@ -1,14 +1,7 @@
 package com.twitchchat.service;
 
 import com.twitchchat.model.Song;
-import com.twitchchat.model.TrackPlay;
-import com.twitchchat.model.PlaylistSyncAudit;
 import com.twitchchat.repository.SongRepository;
-import com.twitchchat.repository.TrackPlayRepository;
-import com.twitchchat.repository.PlaylistSyncAuditRepository;
-import com.twitchchat.playlist.sync.DumpPlaylistService;
-import com.twitchchat.playlist.sync.DuplicateCleanupService;
-import com.twitchchat.playlist.sync.PlaylistSyncAuditService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +12,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.core.env.Environment;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -51,24 +43,6 @@ public class PlaylistSyncService {
 
     @Autowired
     private SongRepository songRepository;
-    
-    @Autowired
-    private TrackPlayRepository trackPlayRepository;
-    
-    @Autowired
-    private PlaylistSyncAuditRepository auditRepository;
-    
-    @Autowired
-    private Environment environment;
-    
-    @Autowired
-    private DumpPlaylistService dumpPlaylistService;
-    
-    @Autowired
-    private DuplicateCleanupService duplicateCleanupService;
-    
-    @Autowired
-    private PlaylistSyncAuditService auditService;
 
     /**
      * Initial sync when application starts (async to avoid blocking startup)
@@ -77,222 +51,405 @@ public class PlaylistSyncService {
     // @PostConstruct
     public void initialSync() {
         logger.info("Startup sync disabled - use scheduled sync or manual sync endpoint");
+        // new Thread(() -> {
+        //     try {
+        //         Thread.sleep(5000); // Wait 5 seconds for app to fully start
+        //         syncPlaylist();
+        //     } catch (Exception e) {
+        //         logger.error("Initial sync failed", e);
+        //     }
+        // }).start();
     }
+
+    /**
+     * Scheduled sync moved to ProductionSchedulingConfig
+     * This method is no longer used
+     */
+    // Moved to ProductionSchedulingConfig for proper profile control
 
     /**
      * Synchronize playlist data from XML feed (synchronized to prevent race conditions)
-     * Includes audit tracking for all sync operations
      */
     @Transactional
     public void syncPlaylist() {
-        syncPlaylistWithAudit("MANUAL");
-    }
-    
-    /**
-     * Scheduled sync method for production use
-     */
-    @Transactional
-    public void scheduledSyncPlaylist() {
-        syncPlaylistWithAudit("SCHEDULED");
-    }
-    
-    /**
-     * Sync playlist data with audit tracking
-     */
-    public void syncPlaylistWithAudit(String triggeredBy) {
-        PlaylistSyncAudit audit = auditService.startSyncAudit(triggeredBy);
-        
-        try {
-            performSync(audit);
-            auditService.markSyncCompleted(audit);
-        } catch (Exception e) {
-            auditService.markSyncFailed(audit, e);
-            throw e;
-        }
-    }
-
-    /**
-     * Sync playlist data from XML feed and audit the operation
-     */
-    @Transactional
-    public void apiSyncPlaylist() {
-        PlaylistSyncAudit audit = auditService.startSyncAudit("API");
-        
-        try {
-            performSync(audit);
-            auditService.markSyncCompleted(audit);
-        } catch (Exception e) {
-            auditService.markSyncFailed(audit, e);
-            throw e;
-        }
-    }
-
-    /**
-     * Core sync logic without audit (for debugging PostgreSQL issues)
-     */
-    private void performSyncWithoutAudit() {
         synchronized (syncLock) {
-            logger.info("Starting playlist synchronization without audit...");
-            
-            try {
-                List<Song> xmlSongs = dumpPlaylistService.fetchSongsFromXml();
-                logger.info("Fetched {} songs from XML", xmlSongs.size());
-                
-                // Skip delete operations that cause PostgreSQL issues
-                logger.info("Skipping delete operations to avoid PostgreSQL syntax errors");
-                
-                // Test simple database operations
-                long currentSongCount = songRepository.count();
-                logger.info("Current songs in database: {}", currentSongCount);
-                
-                logger.info("Sync test completed successfully - {} songs processed, {} in database", 
-                           xmlSongs.size(), currentSongCount);
-                
-            } catch (Exception e) {
-                logger.error("Error during sync without audit", e);
-                throw e;
+            doSyncPlaylist();
+        }
+    }
+
+    /**
+     * Internal sync method (called within synchronized block)
+     */
+    private void doSyncPlaylist() {
+        try {
+            List<Song> xmlSongs = fetchSongsFromXml();
+
+            if (xmlSongs.isEmpty()) {
+                logger.warn("No songs found in XML feed, skipping sync");
+                return;
             }
-        }
-    }
 
-    /**
-     * Core sync logic extracted from the main sync method
-     */
-    private void performSync(PlaylistSyncAudit audit) {
-        synchronized (syncLock) {
-            logger.info("Starting playlist sync...");
-            
-            try {
-                List<Song> songsFromXml = dumpPlaylistService.fetchSongsFromXml();
+            logger.info("Fetched {} songs from XML feed", xmlSongs.size());
 
-                
-                if (songsFromXml.isEmpty()) {
-                    logger.warn("No songs retrieved from XML feed - skipping sync");
-                    return;
+            // Get existing song titles from database (more efficient than loading all songs)
+            List<String> existingTitlesList = songRepository.findAllTitles();
+            Set<String> existingTitles = new HashSet<>(existingTitlesList);
+            logger.info("Found {} existing songs in database", existingTitles.size());
+
+            // Build set of current XML song titles for comparison
+            Set<String> xmlTitles = new HashSet<>();
+            for (Song xmlSong : xmlSongs) {
+                String title = xmlSong.getTitle();
+                if (title != null && !title.trim().isEmpty()) {
+                    xmlTitles.add(title);
                 }
-                
-                logger.info("Fetched {} songs from XML feed", songsFromXml.size());
-                
-                // Get existing songs from database
-                List<Song> existingSongs = songRepository.findAll();
-                Map<String, Song> existingSongMap = new HashMap<>();
-                for (Song song : existingSongs) {
-                    existingSongMap.put(song.getTitle(), song);
-                }
-                
-                // Track sync statistics
-                int addedCount = 0;
-                int updatedCount = 0;
-                int deletedCount = 0;
-                
-                // Process songs from XML
-                Set<String> xmlSongTitles = new HashSet<>();
-                List<Song> songsToSave = new ArrayList<>();
-                
-                for (Song xmlSong : songsFromXml) {
-                    xmlSongTitles.add(xmlSong.getTitle());
-                    
-                    Song existingSong = existingSongMap.get(xmlSong.getTitle());
-                    if (existingSong != null) {
-                        // Update existing song if duration changed
-                        if (!existingSong.getDuration().equals(xmlSong.getDuration())) {
-                            existingSong.setDuration(xmlSong.getDuration());
-                            existingSong.setUpdatedAt(LocalDateTime.now());
-                            songsToSave.add(existingSong);
-                            updatedCount++;
-                            logger.debug("Updated duration for song: {}", existingSong.getTitle());
-                        }
-                    } else {
-                        // New song
-                        songsToSave.add(xmlSong);
-                        addedCount++;
-                        logger.debug("Added new song: {}", xmlSong.getTitle());
+            }
+
+            // Find songs that exist in database but not in XML (removed/renamed tracks)
+            Set<String> removedTitles = new HashSet<>(existingTitles);
+            removedTitles.removeAll(xmlTitles);
+
+            // Remove songs that are no longer in the XML feed
+            if (!removedTitles.isEmpty()) {
+                logger.info("Found {} songs in database that are missing from XML feed", removedTitles.size());
+
+                // Process removals in batches to avoid memory issues
+                List<String> removedTitlesList = new ArrayList<>(removedTitles);
+                int batchSize = 100;
+                int totalBatches = (int) Math.ceil((double) removedTitlesList.size() / batchSize);
+
+                for (int i = 0; i < removedTitlesList.size(); i += batchSize) {
+                    int endIndex = Math.min(i + batchSize, removedTitlesList.size());
+                    List<String> batch = removedTitlesList.subList(i, endIndex);
+                    int currentBatch = (i / batchSize) + 1;
+
+                    try {
+                        int deletedCount = songRepository.deleteByTitleIn(batch);
+                        logger.info("Removal batch {}/{} completed: Deleted {} songs", 
+                                  currentBatch, totalBatches, deletedCount);
+                    } catch (Exception e) {
+                        logger.error("Error removing songs in batch {}/{}", currentBatch, totalBatches, e);
                     }
                 }
-                
-                // Batch save new and updated songs
-                if (!songsToSave.isEmpty()) {
+
+                logger.info("Successfully removed {} songs that were missing from XML feed", removedTitles.size());
+            }
+
+            // Check for duration discrepancies between XML and database
+            checkDurationDiscrepancies(xmlSongs, existingTitles);
+
+            // Add new songs (keeping unique titles only, prevent duplicates)
+            List<Song> newSongs = new ArrayList<>();
+            Set<String> processedTitles = new HashSet<>();
+
+            for (Song xmlSong : xmlSongs) {
+                String title = xmlSong.getTitle();
+                if (title != null && !title.trim().isEmpty() && !processedTitles.contains(title)) {
+                    processedTitles.add(title);
+
+                    // Only add if it doesn't exist in database
+                    if (!existingTitles.contains(title)) {
+                        // Add new song with occurrence = 0 (will be tracked by SongPlayTracker)
+                        xmlSong.setOccurrence(0);
+                        newSongs.add(xmlSong);
+                    }
+                }
+            }
+
+            if (!newSongs.isEmpty()) {
+                logger.info("Processing {} new songs for database insertion", newSongs.size());
+
+                // Process in smaller batches for better performance with large datasets
+                int batchSize = 500;
+                int totalBatches = (int) Math.ceil((double) newSongs.size() / batchSize);
+                logger.info("Processing {} songs in {} batches", newSongs.size(), totalBatches);
+
+                for (int i = 0; i < newSongs.size(); i += batchSize) {
+                    int endIndex = Math.min(i + batchSize, newSongs.size());
+                    List<Song> batch = newSongs.subList(i, endIndex);
+                    int currentBatch = (i / batchSize) + 1;
+
                     try {
-                        songRepository.saveAll(songsToSave);
-                        logger.info("Saved {} songs to database", songsToSave.size());
+                        // Use saveAll with exception handling for potential duplicate key violations
+                        songRepository.saveAll(batch);
+                        logger.info("Batch {}/{} completed: Saved {} songs (Total: {}/{})", 
+                                  currentBatch, totalBatches, batch.size(), endIndex, newSongs.size());
                     } catch (Exception e) {
-                        logger.error("Error saving songs in batch, attempting individual saves", e);
-                        // Fallback to individual saves
-                        for (Song song : songsToSave) {
-                            try {
-                                songRepository.save(song);
-                            } catch (Exception individualError) {
-                                logger.error("Failed to save song: {}", song.getTitle(), individualError);
+                        // Handle potential duplicate key violations gracefully
+                        if (e.getMessage() != null && e.getMessage().contains("duplicate key")) {
+                            logger.warn("Duplicate key violation in batch {}/{} - some songs may already exist, continuing", 
+                                      currentBatch, totalBatches);
+                            // Try saving songs individually to identify which ones are duplicates
+                            for (Song song : batch) {
+                                try {
+                                    songRepository.save(song);
+                                } catch (Exception singleSaveError) {
+                                    logger.debug("Skipped duplicate song: {}", song.getTitle());
+                                }
+                            }
+                        } else {
+                            logger.error("Error saving batch {}/{}", currentBatch, totalBatches, e);
+                            throw e; // Re-throw for other types of errors
+                        }
+                    }
+                }
+
+                logger.info("Successfully added {} new songs to database", newSongs.size());
+            } else {
+                logger.info("No new songs to add, database is up to date");
+            }
+
+            long totalSongs = songRepository.countAllSongs();
+            logger.info("Playlist sync completed. Total songs in database: {}", totalSongs);
+
+        } catch (Exception e) {
+            logger.error("Error during playlist synchronization", e);
+        }
+    }
+
+    /**
+     * Fetch XML document from playlist endpoint with retry logic
+     */
+    @Retryable(
+        value = {Exception.class}, 
+        maxAttempts = 3, 
+        backoff = @Backoff(delay = 2000, multiplier = 2)
+    )
+    private Document fetchXmlDocument() throws Exception {
+        logger.info("Fetching playlist from: {}", PLAYLIST_URL);
+
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        return builder.parse(new URL(PLAYLIST_URL).openStream());
+    }
+
+    /**
+     * Recovery method when all retry attempts fail
+     */
+    @Recover
+    private Document recoverFromXmlFetchFailure(Exception ex) {
+        logger.error("Failed to fetch XML after all retry attempts. Using empty playlist.", ex);
+        // Return a minimal empty XML document
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            return builder.newDocument();
+        } catch (Exception e) {
+            logger.error("Failed to create empty document", e);
+            throw new RuntimeException("Complete XML fetch failure", ex);
+        }
+    }
+
+    /**
+     * Fetch songs from XML feed and parse them
+     */
+    private List<Song> fetchSongsFromXml() {
+        List<Song> songs = new ArrayList<>();
+
+        try {
+            Document document = fetchXmlDocument();
+
+            NodeList leafNodes = document.getElementsByTagName("leaf");
+            logger.info("Found {} songs in XML feed", leafNodes.getLength());
+
+            for (int i = 0; i < leafNodes.getLength(); i++) {
+                Element leafElement = (Element) leafNodes.item(i);
+                String uriStr = leafElement.getAttribute("uri");
+                String durationStr = leafElement.getAttribute("duration");
+
+                if (uriStr != null && !uriStr.trim().isEmpty()) {
+                    Song song = new Song();
+
+                    // Extract and clean song title from URI
+                    String cleanTitle = extractTitleFromUri(uriStr);
+                    if (cleanTitle != null && !cleanTitle.trim().isEmpty()) {
+                        song.setTitle(cleanTitle);
+
+                    // Parse and format duration from seconds to MM:SS format
+                    if (durationStr != null && !durationStr.trim().isEmpty()) {
+                        try {
+                            int totalSeconds = Integer.parseInt(durationStr.trim());
+
+                            // Validate duration is positive - this prevents -1 duration issues
+                            if (totalSeconds < 0) {
+                                logger.warn("Invalid negative duration '{}' for song '{}' - setting to 0", durationStr, cleanTitle);
+                                totalSeconds = 0;
+                            }
+
+                            String formattedDuration = formatDuration(totalSeconds);
+                            song.setDuration(formattedDuration);
+                            logger.debug("Parsed duration for '{}': {} seconds -> {}", cleanTitle, totalSeconds, formattedDuration);
+                        } catch (NumberFormatException e) {
+                            logger.warn("Could not parse duration '{}' for song '{}' - setting default duration", durationStr, cleanTitle);
+                            song.setDuration("0:00"); // Set default duration instead of leaving null
+                        }
+                    } else {
+                        logger.warn("Empty or null duration for song '{}' - setting default duration", cleanTitle);
+                        song.setDuration("0:00"); // Set default duration instead of leaving null
+                    }
+
+
+                    // Set creation timestamp
+                    song.setCreatedAt(LocalDateTime.now());
+
+                        songs.add(song);
+                    } else {
+                        logger.debug("Could not extract valid title from URI: {}", uriStr);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error fetching songs from XML feed", e);
+        }
+
+        return songs;
+    }
+
+    /**
+     * Check for duration discrepancies between XML source and database
+     */
+    private void checkDurationDiscrepancies(List<Song> xmlSongs, Set<String> existingTitles) {
+        logger.info("Checking for duration discrepancies...");
+
+        int discrepancyCount = 0;
+        int fixedCount = 0;
+
+        for (Song xmlSong : xmlSongs) {
+            String title = xmlSong.getTitle();
+            if (title != null && !title.trim().isEmpty() && existingTitles.contains(title)) {
+                try {
+                    // Find the existing song in database
+                    Optional<Song> existingSong = songRepository.findByTitle(title);
+                    if (existingSong.isPresent()) {
+                        String dbDuration = existingSong.get().getDuration();
+                        String xmlDuration = xmlSong.getDuration();
+
+                        // Check for problematic durations
+                        if (dbDuration != null && (dbDuration.equals("0:00") || dbDuration.contains("-1"))) {
+                            discrepancyCount++;
+                            logger.warn("Duration discrepancy found for '{}': DB='{}', XML='{}'", 
+                                      title, dbDuration, xmlDuration);
+
+                            // Fix the duration if XML has valid duration
+                            if (xmlDuration != null && !xmlDuration.equals("0:00") && !xmlDuration.contains("-1")) {
+                                int updated = songRepository.updateDurationByTitle(title, xmlDuration, dbDuration);
+                                if (updated > 0) {
+                                    fixedCount++;
+                                    logger.info("Fixed duration for '{}': '{}' -> '{}'", title, dbDuration, xmlDuration);
+                                }
                             }
                         }
                     }
+                } catch (Exception e) {
+                    logger.error("Error checking duration for song: {}", title, e);
                 }
-                
-                // Find and remove songs that are no longer in XML
-                List<String> songsToDelete = new ArrayList<>();
-                for (String existingTitle : existingSongMap.keySet()) {
-                    if (!xmlSongTitles.contains(existingTitle)) {
-                        songsToDelete.add(existingTitle);
-                    }
-                }
-                
-                if (!songsToDelete.isEmpty()) {
-                    deletedCount = deleteSongsAndTrackPlays(songsToDelete);
-                }
-                
-                // TEMPORARILY SKIP: Clean up duplicate track plays (PostgreSQL syntax issues remain)
-                int duplicatesCleaned = 0;
-                
-                // Update audit record
-                audit.addEntries(addedCount);
-                audit.updateEntries(updatedCount);
-                audit.deleteEntries(deletedCount);
-                audit.removeDuplicateTrackPlays(duplicatesCleaned);
-                auditService.updateSyncProgress(audit);
-                
-                logger.info("Playlist sync completed: {} added, {} updated, {} deleted, {} duplicates cleaned", 
-                          addedCount, updatedCount, deletedCount, duplicatesCleaned);
-                
-            } catch (Exception e) {
-                logger.error("Error during playlist sync", e);
-                throw e;
             }
         }
+
+        if (discrepancyCount > 0) {
+            logger.info("Duration discrepancy check completed: {} discrepancies found, {} fixed", 
+                      discrepancyCount, fixedCount);
+        } else {
+            logger.info("No duration discrepancies found");
+        }
     }
 
     /**
-     * Delete songs and their associated track plays safely
+     * Extract song title from URI field using proper URL decoding
+     * Example: file:///C:/sharec/FFTBattleground-battle/4%20Elements%20II%20-%20World%20of%20Magic.mp3
+     * Returns: 4 Elements II - World of Magic
      */
-    private int deleteSongsAndTrackPlays(List<String> songTitlesToDelete) {
-        if (songTitlesToDelete.isEmpty()) {
-            return 0;
+    private String extractTitleFromUri(String uri) {
+        if (uri == null || uri.trim().isEmpty()) {
+            return null;
         }
-        
+
         try {
-            logger.info("Deleting {} songs and their associated track plays", songTitlesToDelete.size());
-            logger.info("Songs to delete: {}", songTitlesToDelete);
-            
-            // First delete associated track plays to avoid foreign key constraint violations
-            int trackPlaysDeleted = trackPlayRepository.deleteBySongTitleIn(songTitlesToDelete);
-            logger.info("Deleted {} associated track plays", trackPlaysDeleted);
-            
-            // Then delete the songs themselves
-            int songsDeleted = songRepository.deleteByTitleIn(songTitlesToDelete);
-            logger.info("Deleted {} songs from database", songsDeleted);
-            
-            return songsDeleted;
+            // Expected pattern: file:///C:/sharec/FFTBattleground-battle/FILENAME.mp3
+            String prefix = "file:///C:/sharec/FFTBattleground-battle/";
+            String suffix = ".mp3";
+
+            if (uri.startsWith(prefix) && uri.endsWith(suffix)) {
+                // Extract the filename part between prefix and suffix
+                String encodedFilename = uri.substring(prefix.length(), uri.length() - suffix.length());
+
+                // Add debug logging to trace the extraction process
+                logger.debug("URI parsing - Original: '{}', Encoded filename: '{}'", uri, encodedFilename);
+
+                // URL decode the filename
+                String decodedFilename = URLDecoder.decode(encodedFilename, StandardCharsets.UTF_8);
+                logger.debug("URI parsing - Decoded filename: '{}'", decodedFilename);
+
+                // Clean up the title
+                String cleanTitle = cleanSongTitle(decodedFilename);
+
+                logger.debug("URI parsing - Final clean title: '{}'", cleanTitle);
+                return cleanTitle;
+            } else {
+                logger.warn("URI does not match expected pattern: {}", uri);
+                return null;
+            }
         } catch (Exception e) {
-            logger.error("Error deleting songs and track plays", e);
-            throw e;
+            logger.error("Error extracting title from URI: {}", uri, e);
+            return null;
         }
     }
 
     /**
-     * Clean up duplicate track plays that occurred within the song duration window
-     * @return number of duplicate track plays removed
+     * Clean up song title by removing unwanted characters and formatting
      */
-    @Transactional
-    public int cleanupDuplicateTrackPlays() {
-        return duplicateCleanupService.cleanupDuplicateTrackPlays();
+    private String cleanSongTitle(String rawTitle) {
+        if (rawTitle == null || rawTitle.trim().isEmpty()) {
+            return rawTitle;
+        }
+
+        String cleanTitle = rawTitle.trim();
+
+        // IMPORTANT: Do NOT strip or replace underscores.
+        // Some tracks intentionally include underscores, and removing them breaks
+        // searching/matching (and is not reversible).
+
+        // Remove multiple spaces and trim
+        cleanTitle = cleanTitle.replaceAll("\\s+", " ").trim();
+
+        return cleanTitle;
+    }
+
+    /**
+     * Format duration from seconds to MM:SS or H:MM:SS format
+     * Handles negative durations by converting them to 0:00
+     */
+    private String formatDuration(int totalSeconds) {
+        // Critical fix: Handle negative durations to prevent "0:-1" format
+        if (totalSeconds < 0) {
+            logger.warn("Negative duration detected: {} seconds - converting to 0:00", totalSeconds);
+            totalSeconds = 0;
+        }
+
+        int hours = totalSeconds / 3600;
+        int minutes = (totalSeconds % 3600) / 60;
+        int seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return String.format("%d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format("%d:%02d", minutes, seconds);
+        }
+    }
+
+    /**
+     * Get total song count from database
+     */
+    public long getTotalSongCount() {
+        return songRepository.countAllSongs();
+    }
+
+    /**
+     * Force manual sync (for admin/testing purposes)
+     */
+    public void forceSyncPlaylist() {
+        logger.info("Manual playlist sync triggered");
+        syncPlaylist();
     }
 }

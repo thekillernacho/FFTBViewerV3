@@ -86,3 +86,6 @@ externalPort = 3000
 deploymentTarget = "gce"
 run = ["sh", "-c", "sh run-replit-auto.sh"]
 build = ["sh", "-c", "sh build.sh"]
+
+[agent]
+expertMode = true

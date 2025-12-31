@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface SimpleSearchWithButtonProps {
   searchTerm: string;
   onSearch: (term: string) => void;
   onClear: () => void;
+  disabled?: boolean;
 }
 
 export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({ 
   searchTerm, 
   onSearch, 
-  onClear 
+  onClear,
+  disabled = false
 }) => {
   const [inputValue, setInputValue] = useState(searchTerm);
+
+  // Keep the input in sync when the parent updates searchTerm (e.g. Clear).
+  useEffect(() => {
+    setInputValue(searchTerm);
+  }, [searchTerm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -21,10 +28,10 @@ export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({
     onSearch(inputValue);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      onSearch(inputValue);
+      if (!disabled) onSearch(inputValue);
     }
   };
 
@@ -44,7 +51,8 @@ export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({
         type="text"
         value={inputValue}
         onChange={handleInputChange}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
         placeholder="Search songs... (Press Enter or click Search)"
         style={{
           flex: 1,
@@ -55,9 +63,10 @@ export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({
           outline: 'none'
         }}
       />
-      
+
       <button 
         onClick={handleSearch}
+        disabled={disabled}
         style={{
           padding: '12px 20px',
           fontSize: '16px',
@@ -65,15 +74,17 @@ export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({
           color: 'white',
           border: 'none',
           borderRadius: '4px',
-          cursor: 'pointer'
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.7 : 1
         }}
       >
         Search
       </button>
-      
+
       {inputValue && (
         <button 
           onClick={handleClear}
+          disabled={disabled}
           style={{
             padding: '12px',
             fontSize: '16px',
@@ -81,7 +92,8 @@ export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: 'pointer'
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.7 : 1
           }}
         >
           ✕
