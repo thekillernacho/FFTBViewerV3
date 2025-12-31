@@ -116,6 +116,8 @@ const PlaylistView: React.FC = () => {
   return (
     <div className="playlist-view">
       <CurrentTrack />
+
+      <div style={{ marginBottom: '1rem' }} />
       
       <div className="playlist-header">
         <h2>Music Playlist</h2>
