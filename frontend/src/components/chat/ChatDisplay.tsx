@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
+import ConnectionStatus from './ConnectionStatus';
 import { ChatMessage as ChatMessageType } from '../../types';
 const styles = require('../../styles/ChatView.module.css');
 
@@ -9,25 +10,24 @@ interface ChatDisplayProps {
 }
 
 function ChatDisplay({ messages, connected }: ChatDisplayProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   return (
-    <div className={styles.messagesContainer}>
+    <div ref={messagesContainerRef} className={styles.messagesContainer}>
       <div className={styles.messagesList}>
         {messages.length === 0 ? (
-          <div className={styles.loading}>
-            {connected ? 'Waiting for messages...' : 'Connecting to chat...'}
-          </div>
+          <ConnectionStatus connected={connected} />
         ) : (
           messages.map((message, index) => (
             <ChatMessage key={index} message={message} />
           ))
         )}
-        <div ref={messagesEndRef} />
       </div>
     </div>
   );

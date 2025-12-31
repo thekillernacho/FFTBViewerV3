@@ -34,6 +34,14 @@ export class PlaylistService {
     return await response.json();
   }
 
+  static async getPlaylistStatus(): Promise<any> {
+    const response = await fetch('/api/playlist/status');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  }
+
   static async getLatestSongTime(): Promise<LatestSongResponse> {
     const response = await fetch('/api/latest-song-time');
     if (!response.ok) {

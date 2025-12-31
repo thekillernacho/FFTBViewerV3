@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replit Keystore Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1f36 0%, #1e2337 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #9147ff;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #b9bbbe;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(47, 49, 54, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(88, 101, 242, 0.1);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border: 1px solid rgba(88, 101, 242, 0.3);
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #5865f2;
+            display: block;
+        }
+
+        .stat-label {
+            color: #b9bbbe;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn {
+            background: #5865f2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #4752c4;
+        }
+
+        .refresh-btn:disabled {
+            background: #4f545c;
+            cursor: not-allowed;
+        }
+
+        .search-input {
+            background: #40444b;
+            border: 1px solid #72767d;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #5865f2;
+        }
+
+        .table-container {
+            background: #2f3136;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: #36393f;
+            padding: 15px 20px;
+            text-align: left;
+            font-weight: 600;
+            color: #ffffff;
+            border-bottom: 2px solid #40444b;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table td {
+            padding: 12px 20px;
+            border-bottom: 1px solid #40444b;
+            vertical-align: top;
+        }
+
+        .data-table tr:hover {
+            background: rgba(88, 101, 242, 0.1);
+        }
+
+        .key-cell {
+            font-weight: 600;
+            color: #00d4aa;
+            max-width: 200px;
+            word-break: break-all;
+        }
+
+        .value-cell {
+            color: #dcddde;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+
+        .json-value {
+            background: #292b2f;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 200px;
+            overflow-y: auto;
+            border-left: 3px solid #5865f2;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #b9bbbe;
+            font-size: 1.1rem;
+        }
+
+        .error {
+            background: rgba(237, 66, 69, 0.1);
+            border: 1px solid rgba(237, 66, 69, 0.3);
+            color: #ed4245;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 50px;
+            color: #72767d;
+            font-size: 1.1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stats {
+                gap: 15px;
+            }
+
+            .stat-card {
+                min-width: 120px;
+                padding: 10px 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input {
+                min-width: auto;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px 12px;
+            }
+
+            .key-cell,
+            .value-cell {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗄️ Replit Keystore Viewer</h1>
+        <p>Inspect all key-value pairs in your Replit Database</p>
+    </div>
+
+    <div class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-value" id="total-keys">-</span>
+                <div class="stat-label">Total Keys</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="filtered-keys">-</span>
+                <div class="stat-label">Filtered Keys</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="refresh-btn" id="refresh-btn" onclick="loadKeystoreData()">
+                🔄 Refresh Data
+            </button>
+            <input type="text" class="search-input" id="search-input" placeholder="Search keys or values..." 
+                   onkeyup="filterTable()">
+        </div>
+
+        <div id="loading" class="loading">
+            Loading keystore data...
+        </div>
+
+        <div id="error" class="error hidden"></div>
+
+        <div id="table-container" class="table-container hidden">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 250px;">Key</th>
+                        <th>Value</th>
+                        <th style="width: 120px;">Type</th>
+                    </tr>
+                </thead>
+                <tbody id="data-tbody">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="empty" class="empty hidden">
+            <p>No data found in the keystore.</p>
+        </div>
+    </div>
+
+    <script>
+        let keystoreData = {};
+        let filteredData = {};
+
+        // Load keystore data from API
+        async function loadKeystoreData() {
+            const refreshBtn = document.getElementById('refresh-btn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const tableContainer = document.getElementById('table-container');
+            const empty = document.getElementById('empty');
+
+            // Show loading state
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = '🔄 Loading...';
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            tableContainer.classList.add('hidden');
+            empty.classList.add('hidden');
+
+            try {
+                const response = await fetch('/keystore/api/all');
+                const result = await response.json();
+
+                if (result.success) {
+                    keystoreData = result.data;
+                    filteredData = { ...keystoreData };
+                    
+                    if (Object.keys(keystoreData).length === 0) {
+                        empty.classList.remove('hidden');
+                    } else {
+                        renderTable();
+                        tableContainer.classList.remove('hidden');
+                    }
+                    
+                    updateStats();
+                } else {
+                    showError(result.error || 'Failed to load keystore data');
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+                console.error('Error loading keystore:', err);
+            } finally {
+                loading.classList.add('hidden');
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = '🔄 Refresh Data';
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.classList.remove('hidden');
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('total-keys').textContent = Object.keys(keystoreData).length;
+            document.getElementById('filtered-keys').textContent = Object.keys(filteredData).length;
+        }
+
+        // Render the data table
+        function renderTable() {
+            const tbody = document.getElementById('data-tbody');
+            tbody.innerHTML = '';
+
+            Object.entries(filteredData).forEach(([key, value]) => {
+                const row = document.createElement('tr');
+                
+                // Determine value type and format
+                let formattedValue = value;
+                let valueType = 'String';
+                
+                try {
+                    const parsed = JSON.parse(value);
+                    if (typeof parsed === 'object') {
+                        formattedValue = JSON.stringify(parsed, null, 2);
+                        valueType = 'JSON';
+                    } else {
+                        valueType = typeof parsed;
+                    }
+                } catch (e) {
+                    // Not JSON, treat as string
+                }
+
+                row.innerHTML = `
+                    <td class="key-cell" title="${escapeHtml(key)}">${escapeHtml(key)}</td>
+                    <td class="value-cell">
+                        ${valueType === 'JSON' ? 
+                            `<div class="json-value">${escapeHtml(formattedValue)}</div>` : 
+                            `<span title="${escapeHtml(value)}">${escapeHtml(truncateString(value, 100))}</span>`
+                        }
+                    </td>
+                    <td style="color: #faa61a; font-weight: 600;">${valueType}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter table based on search input
+        function filterTable() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            if (!searchTerm.trim()) {
+                filteredData = { ...keystoreData };
+            } else {
+                filteredData = {};
+                Object.entries(keystoreData).forEach(([key, value]) => {
+                    if (key.toLowerCase().includes(searchTerm) || 
+                        value.toLowerCase().includes(searchTerm)) {
+                        filteredData[key] = value;
+                    }
+                });
+            }
+
+            renderTable();
+            updateStats();
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function truncateString(str, maxLength) {
+            return str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadKeystoreData);
+    </script>
+</body>
+</html>

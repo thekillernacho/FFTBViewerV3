@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ChatDisplay from './ChatDisplay';
+import { TwitchEmbed } from './TwitchEmbed';
 import { ChatService } from '../../services/ChatService';
 import { ChatMessage } from '../../types';
 const styles = require('../../styles/ChatView.module.css');
@@ -33,6 +34,7 @@ function ChatView() {
         </div>
       </div>
       
+      <TwitchEmbed channel="fftbattleground" />
       <ChatDisplay messages={messages} connected={connected} />
     </div>
   );

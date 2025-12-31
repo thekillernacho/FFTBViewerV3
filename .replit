@@ -1,7 +1,8 @@
-modules = ["java", "java-21", "maven", "postgresql-16", "java-11", "python-3.11", "nodejs-20"]
+modules = ["java", "java-21", "maven", "java-11", "python-3.11", "nodejs-20", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["redis", "maven", "jdk11"]
 
 [workflows]
 runButton = "Project"
@@ -21,15 +22,15 @@ args = "Build Project"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Run Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Frontend Tests"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Run Server (Production)"
+args = "Run Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Final Server"
 
 [[workflows.workflow]]
 name = "Quick Tests"
@@ -48,15 +49,6 @@ task = "shell.exec"
 args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PWD/maven/bin:$PATH && echo \"Starting build process...\" && mvn clean install -Dmaven.test.skip=true && echo \"Build complete! JAR file created at target/twitch-chat-reader-1.0.0.jar\""
 
 [[workflows.workflow]]
-name = "Run Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000 --spring.profiles.active=dev"
-waitForPort = 5000
-
-[[workflows.workflow]]
 name = "Frontend Tests"
 author = "agent"
 
@@ -65,7 +57,7 @@ task = "shell.exec"
 args = "cd /home/runner/workspace && npx jest frontend/tests/ --verbose"
 
 [[workflows.workflow]]
-name = "Run Server (Production)"
+name = "Run Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
@@ -73,11 +65,32 @@ task = "shell.exec"
 args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000 --spring.profiles.active=prod"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Final Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && export JAVA_HOME=/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11 && export PATH=$JAVA_HOME/bin:$PATH && java -Dspring.profiles.active=dev -Dlogging.level.root=ERROR -jar target/twitch-chat-reader-1.0.0.jar --server.port=5000"
+waitForPort = 5000
+
 [[ports]]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
 [deployment]
-deploymentTarget = "gce"
-run = ["sh", "-c", "sh run-replit-auto.sh"]
-build = ["sh", "-c", "sh build.sh"]
+deploymentTarget = "vm"
+run = ["java", "-jar", "target/twitch-chat-reader-1.0.0.jar", "--server.port=5000", "--spring.profiles.active=prod"]
+build = ["mvn", "clean", "install", "-Dmaven.test.skip=true"]
+
+[agent]
+expertMode = true
+
+[userenv]
+
+[userenv.production]
+JAVA_HOME = "/nix/store/023zqb5jvvjhv5l1b0fzdaqxy8c7ilcl-adoptopenjdk-openj9-bin-11.0.11"

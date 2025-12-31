@@ -7,7 +7,9 @@ import com.twitchchat.service.PlaylistSyncService;
 import com.twitchchat.service.PlaylistService;
 import com.twitchchat.service.SongPlayTracker;
 import com.twitchchat.service.SongPlayCountViewService;
+import com.twitchchat.service.CurrentTrackService;
 import com.twitchchat.dto.SongWithTrackPlayCount;
+import com.twitchchat.playlist.sync.PlaylistSyncAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +43,12 @@ public class ApiController {
     
     @Autowired
     private SongPlayCountViewService songPlayCountViewService;
+    
+    @Autowired
+    private PlaylistSyncAuditService playlistSyncAuditService;
+    
+    @Autowired
+    private CurrentTrackService currentTrackService;
 
     /**
      * Get playlist status and statistics
@@ -54,11 +62,19 @@ public class ApiController {
         long totalPlays = songPlayTracker.getTotalPlays();
         long playedSongs = songPlayTracker.getPlayedSongsCount();
         
+        // Get the last sync completion time
+        String lastSyncTime = playlistSyncAuditService.getLastSyncCompletionTime();
+        
+        // Get the earliest track play date (when tracking started)
+        String trackingStartDate = songPlayTracker.getTrackingStartDate();
+        
         status.put("totalSongs", totalSongs);
         status.put("isAvailable", isAvailable);
         status.put("status", isAvailable ? "ready" : "syncing");
         status.put("totalPlays", totalPlays);
         status.put("playedSongs", playedSongs);
+        status.put("lastSyncTime", lastSyncTime);
+        status.put("trackingStartDate", trackingStartDate);
         
         return ResponseEntity.ok(status);
     }
@@ -194,7 +210,7 @@ public class ApiController {
     @PostMapping("/playlist/sync")
     public ResponseEntity<Map<String, String>> forceSync() {
         try {
-            playlistSyncService.forceSyncPlaylist();
+            playlistSyncService.syncPlaylist();
             
             Map<String, String> response = new HashMap<>();
             response.put("status", "success");
@@ -232,4 +248,6 @@ public class ApiController {
         List<Song> mostPlayed = songRepository.findTop20ByOrderByOccurrenceDesc();
         return ResponseEntity.ok(mostPlayed);
     }
+    
+
 }

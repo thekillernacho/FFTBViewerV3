@@ -29,6 +29,15 @@ const Pagination: React.FC<PaginationProps> = ({
       
       <div className="pagination-controls">
         <button 
+          onClick={() => onPageChange(0)}
+          disabled={!hasPrevious}
+          className="pagination-button"
+          title="Go to first page"
+        >
+          First
+        </button>
+        
+        <button 
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPrevious}
           className="pagination-button"
@@ -42,6 +51,15 @@ const Pagination: React.FC<PaginationProps> = ({
           className="pagination-button"
         >
           Next
+        </button>
+        
+        <button 
+          onClick={() => onPageChange(totalPages - 1)}
+          disabled={!hasNext}
+          className="pagination-button"
+          title="Go to last page"
+        >
+          Last
         </button>
       </div>
 
