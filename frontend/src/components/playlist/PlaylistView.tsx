@@ -1,104 +1,171 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { PlaylistService } from '../../services/PlaylistService';
+import { SongPlayCountView } from '../../types';
+import PlaylistStats from './PlaylistStats';
+import SongTable from './SongTable';
+import Pagination from './Pagination';
+import CurrentTrack from './CurrentTrack';
+import { SimpleSearchWithButton } from './SimpleSearchWithButton';
 
-interface SimpleSearchWithButtonProps {
-  searchTerm: string;
-  onSearch: (term: string) => void;
-  onClear: () => void;
-  disabled?: boolean;
+interface PlaylistState {
+  songs: SongPlayCountView[];
+  totalSongs: number;
+  totalPages: number;
+  currentPage: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  loading: boolean;
+  error: string | null;
 }
 
-export const SimpleSearchWithButton: React.FC<SimpleSearchWithButtonProps> = ({ 
-  searchTerm, 
-  onSearch, 
-  onClear,
-  disabled = false
-}) => {
-  const [inputValue, setInputValue] = useState(searchTerm);
+interface PlaylistStatusData {
+  totalSongs: number;
+  totalPlays: number;
+  trackingStartDate: string | null;
+  lastSyncTime: string | null;
+}
 
-  // Keep the input in sync when the parent updates searchTerm (e.g. Clear).
-  useEffect(() => {
-    setInputValue(searchTerm);
-  }, [searchTerm]);
+const PlaylistView: React.FC = () => {
+  const [state, setState] = useState<PlaylistState>({
+    songs: [],
+    totalSongs: 0,
+    totalPages: 0,
+    currentPage: 0,
+    hasNext: false,
+    hasPrevious: false,
+    loading: true,
+    error: null
+  });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
+  const [statusData, setStatusData] = useState<PlaylistStatusData | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('title');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [pageSize, setPageSize] = useState(50);
 
-  const handleSearch = () => {
-    onSearch(inputValue);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (!disabled) onSearch(inputValue);
+  const fetchSongs = useCallback(async (page: number, search: string, sort: string, direction: 'asc' | 'desc', size: number) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await PlaylistService.getSongsWithTrackPlays(page, size, sort, direction, search);
+      setState({
+        songs: data.songs || data.content || [],
+        totalSongs: data.totalSongs ?? data.totalElements ?? 0,
+        totalPages: data.totalPages ?? 0,
+        currentPage: data.currentPage ?? data.number ?? page,
+        hasNext: data.hasNext ?? !(data.last ?? true),
+        hasPrevious: data.hasPrevious ?? !(data.first ?? true),
+        loading: false,
+        error: null
+      });
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: err instanceof Error ? err.message : 'Failed to fetch songs'
+      }));
     }
+  }, []);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const status = await PlaylistService.getPlaylistStatus();
+      setStatusData({
+        totalSongs: status.totalSongs ?? 0,
+        totalPlays: status.totalPlays ?? 0,
+        trackingStartDate: status.trackingStartDate ?? null,
+        lastSyncTime: status.lastSyncTime ?? null
+      });
+    } catch (err) {
+      console.error('Failed to fetch playlist status:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSongs(0, searchTerm, sortBy, sortDirection, pageSize);
+    fetchStatus();
+  }, [fetchSongs, fetchStatus]);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    fetchSongs(0, term, sortBy, sortDirection, pageSize);
   };
 
-  const handleClear = () => {
-    setInputValue('');
-    onClear();
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    fetchSongs(0, '', sortBy, sortDirection, pageSize);
   };
+
+  const handleSort = (column: string) => {
+    const newDirection = sortBy === column && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortBy(column);
+    setSortDirection(newDirection);
+    fetchSongs(state.currentPage, searchTerm, column, newDirection, pageSize);
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchSongs(page, searchTerm, sortBy, sortDirection, pageSize);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    fetchSongs(0, searchTerm, sortBy, sortDirection, size);
+  };
+
+  const displayTotalSongs = statusData?.totalSongs ?? state.totalSongs;
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      gap: '8px', 
-      alignItems: 'center',
-      marginBottom: '20px' 
-    }}>
-      <input
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        placeholder="Search songs... (Press Enter or click Search)"
-        style={{
-          flex: 1,
-          padding: '12px',
-          fontSize: '16px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          outline: 'none'
-        }}
+    <div className="playlist-view">
+      <CurrentTrack />
+      
+      <div className="playlist-header">
+        <h2>Music Playlist</h2>
+      </div>
+
+      <PlaylistStats
+        totalSongs={displayTotalSongs}
+        showingSongs={state.songs.length}
+        latestSongTime={statusData?.lastSyncTime}
+        totalPlays={statusData?.totalPlays}
+        trackingStartDate={statusData?.trackingStartDate}
       />
 
-      <button 
-        onClick={handleSearch}
-        disabled={disabled}
-        style={{
-          padding: '12px 20px',
-          fontSize: '16px',
-          background: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.7 : 1
-        }}
-      >
-        Search
-      </button>
+      <SimpleSearchWithButton
+        searchTerm={searchTerm}
+        onSearch={handleSearch}
+        onClear={handleClearSearch}
+        disabled={state.loading}
+      />
 
-      {inputValue && (
-        <button 
-          onClick={handleClear}
-          disabled={disabled}
-          style={{
-            padding: '12px',
-            fontSize: '16px',
-            background: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.7 : 1
-          }}
-        >
-          ✕
-        </button>
+      {state.error && (
+        <div className="error-message">
+          Error: {state.error}
+        </div>
+      )}
+
+      {state.loading ? (
+        <div className="loading">Loading songs...</div>
+      ) : (
+        <>
+          <SongTable
+            songs={state.songs}
+            sortBy={sortBy}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+          />
+
+          <Pagination
+            currentPage={state.currentPage}
+            totalPages={state.totalPages}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            hasNext={state.hasNext}
+            hasPrevious={state.hasPrevious}
+          />
+        </>
       )}
     </div>
   );
 };
+
+export default PlaylistView;
