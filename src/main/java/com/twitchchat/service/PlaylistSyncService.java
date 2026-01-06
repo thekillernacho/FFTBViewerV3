@@ -370,10 +370,10 @@ public class PlaylistSyncService {
 
     /**
      * Check for duration discrepancies between XML source and database
-     * OPTIMIZED: Uses batch query instead of N individual queries
+     * Updates ALL songs where duration differs from XML, not just problematic ones
      */
     private void checkDurationDiscrepancies(List<Song> xmlSongs, Set<String> existingTitles) {
-        logger.info("Checking for duration discrepancies (optimized batch query)...");
+        logger.info("Checking for duration discrepancies...");
 
         try {
             // Step 1: Build a map of XML songs by title for quick lookup
@@ -385,25 +385,28 @@ public class PlaylistSyncService {
                 }
             }
             
-            // Step 2: Fetch only songs with problematic durations in ONE query
-            List<Song> problematicSongs = songRepository.findSongsWithProblematicDurations();
-            logger.info("Found {} songs with problematic durations (0:00 or -1)", problematicSongs.size());
+            // Step 2: Fetch ALL existing songs to compare durations
+            List<Song> allDbSongs = songRepository.findAll();
+            logger.info("Comparing durations for {} songs in database", allDbSongs.size());
             
             int fixedCount = 0;
-            int discrepancyCount = problematicSongs.size();
+            int discrepancyCount = 0;
             
-            // Step 3: Update durations for songs where XML has valid duration
-            for (Song dbSong : problematicSongs) {
+            // Step 3: Update durations for songs where XML duration differs from database
+            for (Song dbSong : allDbSongs) {
                 String title = dbSong.getTitle();
                 String xmlDuration = xmlDurationsByTitle.get(title);
+                String dbDuration = dbSong.getDuration();
                 
-                if (xmlDuration != null && !xmlDuration.equals("0:00") && !xmlDuration.contains("-1")) {
+                // Check if XML has a different duration than database
+                if (xmlDuration != null && !xmlDuration.equals(dbDuration)) {
+                    discrepancyCount++;
                     try {
                         int updated = songRepository.updateDurationForTitle(title, xmlDuration);
                         if (updated > 0) {
                             fixedCount++;
-                            if (fixedCount <= 5) {
-                                logger.info("Fixed duration for '{}': '{}' -> '{}'", title, dbSong.getDuration(), xmlDuration);
+                            if (fixedCount <= 10) {
+                                logger.info("Updated duration for '{}': '{}' -> '{}'", title, dbDuration, xmlDuration);
                             }
                         }
                     } catch (Exception e) {
@@ -413,7 +416,7 @@ public class PlaylistSyncService {
             }
 
             if (discrepancyCount > 0) {
-                logger.info("Duration discrepancy check completed: {} discrepancies found, {} fixed", 
+                logger.info("Duration check completed: {} discrepancies found, {} updated", 
                           discrepancyCount, fixedCount);
             } else {
                 logger.info("No duration discrepancies found");
