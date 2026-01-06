@@ -32,9 +32,9 @@ const SongTable: React.FC<SongTableProps> = ({ songs, sortBy, sortDirection, onS
             </th>
             <th 
               className={`${styles.sortable} ${styles.durationHeader}`} 
-              onClick={() => onSort('duration')}
+              onClick={() => onSort('durationSeconds')}
             >
-              Duration {getSortIcon('duration')}
+              Duration {getSortIcon('durationSeconds')}
             </th>
             <th 
               className={`${styles.sortable} ${styles.playsHeader} ${styles.hideOnMobile}`} 

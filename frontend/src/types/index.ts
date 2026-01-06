@@ -38,6 +38,7 @@ export interface SongPlayCountView {
   creator?: string | null;
   album?: string | null;
   duration: string;
+  durationSeconds?: number;
   location?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
